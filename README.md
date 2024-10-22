@@ -6,9 +6,6 @@
 
 # Proyecto Anonify
 
-# Proyecto Pagina Web Cloud Computing
-
-
 ## 1.1 frontend
 
 ## 2.1.- backend
