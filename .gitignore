@@ -1,0 +1,18 @@
+# backend
+
+## python cache
+
+__pycache__/
+__pycache__
+
+## python enviroment
+
+venv/
+venv
+
+## variables de entorno
+
+.env
+
+## uploads
+uploads/
