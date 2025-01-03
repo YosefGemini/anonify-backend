@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from uuid import UUID
-from schemas.file import FileBase, FileUpdate, FileDelete
+from schemas.file import FileBase , File_DB, FileUpdate, FileDelete
 from models import file_model
 
 

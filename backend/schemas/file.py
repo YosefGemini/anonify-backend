@@ -6,6 +6,7 @@ from uuid import UUID
 class FileBase(BaseModel):
     name: str
     path: str
+    created_at: str
     
 
 

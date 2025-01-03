@@ -13,5 +13,5 @@ class ValueType(Base):
 
 
     id= Column(UUID(as_uuid=True), primary_key=True, index=True, unique=True, nullable=False, server_default=func.gen_random_uuid())
-    name= Column(String, nullable=False)
+    name= Column(String(15), nullable=False)
     

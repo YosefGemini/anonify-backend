@@ -17,3 +17,10 @@ class Query(Base):
     creation_date = Column(DateTime, nullable=False, server_default=func.now())
     execution_date = Column(DateTime)
 
+
+    #relationships
+    
+    # database = relationship('Database', backref=backref('query', uselist=False))
+    # dataset = relationship('Dataset', backref=backref('query', uselist=False))
+
+

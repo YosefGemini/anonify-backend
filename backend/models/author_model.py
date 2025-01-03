@@ -12,5 +12,9 @@ class Author(Base):
 
 
     id= Column(UUID(as_uuid=True), primary_key=True, index=True, unique=True, nullable=False, server_default=func.gen_random_uuid())
-    name= Column(String, nullable=False)
-    nationality= Column(String, nullable=False)
+    name= Column(String(250), nullable=False)
+    nationality= Column(String(250), nullable=False)
+
+    #Relationships
+
+    projects= relationship('Project', backref=backref('author', uselist=True))

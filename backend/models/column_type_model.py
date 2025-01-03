@@ -12,4 +12,10 @@ class ColumnType(Base):
 
 
     id= Column(UUID(as_uuid=True), primary_key=True, index=True, unique=True, nullable=False, server_default=func.gen_random_uuid())
-    name= Column(String, nullable=False)
+    
+    name= Column(String(250), nullable=False)
+    # query_id = Column(UUID(as_uuid=True), ForeignKey('queries.id'), nullable=False)
+
+    # value_type_id = Column(UUID(as_uuid=True), ForeignKey('value_types.id'), nullable=False)
+
+    
