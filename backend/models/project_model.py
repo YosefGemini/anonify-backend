@@ -21,6 +21,6 @@ class Project(Base):
 
     # relationships
     
-    #datasets= relationship('Dataset', backref=backref('project', uselist=True))
+    datasets= relationship('Dataset', backref=backref('project', uselist=True))
 
     

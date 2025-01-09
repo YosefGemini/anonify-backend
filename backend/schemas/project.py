@@ -9,7 +9,7 @@ class ProjectBase(BaseModel):
     description: str
 
 class ProjectCreate(ProjectBase):
-    author_id: str
+    author_id: UUID
 
 
 class Project(ProjectBase):
@@ -20,7 +20,7 @@ class Project(ProjectBase):
         orm_mode = True
 
 
-class ProjectInformation(Project):
+class ProjectInformation(ProjectBase):
     id: UUID
     datasets: list[Dataset]
     class Config:

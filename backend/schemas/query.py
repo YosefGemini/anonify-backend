@@ -12,7 +12,7 @@ class QueryBase(BaseModel):
     query: str
 
 class QueryCreate(QueryBase):
-    db_id: str
+    db_id: UUID
     columns: list[Column]
 
 class Query(QueryCreate):

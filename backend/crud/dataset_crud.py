@@ -69,7 +69,7 @@ def create_dataset(db: Session, dataset: DatasetCreate):
 
 
 
-def get_dataset_by_project_id(db: Session, project_id: str):
+def get_datasets_by_project_id(db: Session, project_id: str):
     db_dataset = db.query(dataset_model.Dataset).filter(dataset_model.Dataset.project_id == project_id).all()
 
     if not db_dataset:

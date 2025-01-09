@@ -18,13 +18,16 @@ from db.db import engine, get_db, Base
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from os import path
+from functions import auth_token, auth
+
+
 
 
 
 # Schemas import
-from schemas.file import FileBase, File_DB
-from schemas.author import AuthorBase, Author, AuthorCreate, AuthorUpdate, AuthorDelete, AuthorPublic
-from schemas.project import ProjectBase, Project, ProjectCreate, ProjectUpdate, ProjectDelete
+from schemas.file import FileBase, File_DB, FileCreate
+from schemas.author import AuthorBase, Author, AuthorCreate, AuthorUpdate, AuthorDelete, AuthorPublic, AuthorToken, AuthCredentials
+from schemas.project import ProjectBase, Project, ProjectCreate, ProjectUpdate, ProjectDelete, ProjectInformation
 from schemas.dataset import DatasetBase, Dataset, DatasetCreate
 from schemas.column import ColumnBase, Column, ColumnCreate, ColumnUpdate, ColumnDelete
 from schemas.column_type import ColumnTypeBase, ColumnType, ColumnTypeCreate, ColumnTypeUpdate, ColumnTypeDelete
@@ -54,6 +57,84 @@ app.add_middleware(
 def get_main():
     return {"Hello": "World"}
 
+
+
+
+# Session endopints 
+
+async def validate_token_header(
+    Authorization: str = Header(),
+
+) -> AuthorToken:
+    try:
+        authorization_token = Authorization.split(" ")[1]
+        print(authorization_token)
+        if not authorization_token:
+            raise HTTPException(status_code=400, detail="Token is missing")
+        current_user = auth_token.decode_access_token(authorization_token)
+        # if current_user == None:  # el token no es valido
+        print(current_user)
+        if not current_user:  # el token no es valido
+            raise HTTPException(status_code=404, detail="Session not found")
+        user_token = AuthorToken(**current_user)
+        print(user_token)
+        return user_token
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=400, detail="Token is missing")
+
+# **************************** VALIDATE TOKEN **************************
+@app.get("/api/validate_token", response_model=AuthorToken)
+async def validate_token_endpoint(
+    current_user: AuthorToken = Depends(validate_token_header),
+):
+    return current_user
+
+
+# endpint proyectos con token
+@app.get("/api/user/projects/", response_model= AuthorPublic)
+async def get_project_endpoint(
+    db: Session = Depends(get_db),
+    # Authorization: str = Header(),
+    current_user: AuthorToken = Depends(validate_token_header),
+):
+    return author_crud.get_author(db=db, author_id=current_user.id)
+
+@app.post("/api/login")
+async def login_endpoint(
+    response: Response, auth_credentials: AuthCredentials, db: Session = Depends(get_db)
+):
+    user_info = author_crud.login_user(db=db, auth_credentials=auth_credentials)
+    # print(user_info.__dict__)
+    current_token = auth_token.generate_access_token(
+        {
+            "id": str(user_info.id),
+            "name": user_info.name,
+            "username": user_info.username,
+            "mail": user_info.mail,
+            # "profile_pic": user_info.profile_pic if user_info.profile_pic else None
+            #"password": user_info.password,
+        }
+    )
+    return {
+        "msg": "Login successful",
+        "token": current_token,
+    }
+
+# Change password
+
+@app.post("/api/user/change_password")
+async def change_password_endpoint(
+    password: str = Body(embed=True),
+    current_user: AuthorToken = Depends(validate_token_header),
+    db: Session = Depends(get_db),
+):
+
+    return author_crud.change_password(
+        db=db, current_user=current_user, password=password
+    )
+
+
 # Author endpoints
 
 # CREATE AUTHOR
@@ -61,6 +142,7 @@ def get_main():
 @app.post("/api/authors" , response_model=Author)
 async def create_author_endpoint(
     author: AuthorCreate,
+    # current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),   
 ):
     print("author", author)
@@ -71,6 +153,7 @@ async def create_author_endpoint(
 @app.get("/api/authors/{author_id}", response_model=Author )
 async def get_author_endpoint(
     author_id: str,
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
     
     
@@ -81,6 +164,7 @@ async def get_author_endpoint(
 
 @app.get("/api/authors",  response_model=list[AuthorPublic])
 async def get_all_authors_endpoint(
+    # current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return author_crud.get_all_authors(db=db)
@@ -90,6 +174,7 @@ async def get_all_authors_endpoint(
 @app.put("/api/authors", response_model=Author)
 async def update_author_endpoint(
     author: AuthorUpdate,
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return author_crud.update_author(db=db, author=author)
@@ -98,6 +183,7 @@ async def update_author_endpoint(
 @app.delete("/api/authors", response_model=Author)
 async def delete_author(
     author: AuthorDelete,
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return author_crud.delete_author(db=db, author_id=author.id)
@@ -111,14 +197,16 @@ async def delete_author(
 @app.post("/api/projects" , response_model=Project)
 async def create_project_endpoint(
     project: ProjectCreate,
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return project_crud.create_project(db=db, project=project)
 
 # GET PROJECT
-@app.get("/api/projects/{project_id}", response_model=Project)
+@app.get("/api/projects/{project_id}", response_model=ProjectInformation)
 async def get_project_endpoint(
     project_id: str,
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return project_crud.get_project(db=db, project_id=project_id)
@@ -126,14 +214,26 @@ async def get_project_endpoint(
 # GET ALL PROJECTS
 @app.get("/api/projects", response_model=list[Project])
 async def get_all_projects_endpoint(
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return project_crud.get_all_projects(db=db)
+
+# GET ALL PROJECTS BY AUTHOR
+@app.get("/api/projects/author/{author_id}", response_model=list[Project])
+
+async def get_all_projects_by_author_endpoint(
+    author_id: str,
+    current_user: AuthorToken = Depends(validate_token_header),
+    db: Session = Depends(get_db),
+):
+    return project_crud.get_all_projects_by_author(db=db, author_id=author_id)
 
 # UPDATE PROJECT
 @app.put("/api/projects", response_model=Project)
 async def update_project_endpoint(
     project: ProjectUpdate,
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return project_crud.update_project(db=db, project=project)
@@ -142,6 +242,7 @@ async def update_project_endpoint(
 @app.delete("/api/projects", response_model=Project)
 async def delete_project(
     project: ProjectDelete,
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return project_crud.delete_project(db=db, project_id=project.id)
@@ -151,9 +252,11 @@ async def delete_project(
 
 # Creado y guarda un archivo en la carpeta uploads/files
 
-@app.post("/api/files" , response_model=list[File_DB])
+@app.post("/api/files/{dataset_id}" , response_model=list[File_DB])
 async def upload_file_endpoint(
+    dataset_id: str,
     db: Session = Depends(get_db),
+    current_user: AuthorToken = Depends(validate_token_header),
     file: UploadFile = File(...),
     #product_id: str = Form(...),
     #current_user: UserToken = Depends(validate_token_header),
@@ -203,9 +306,10 @@ async def upload_file_endpoint(
             buffer.close()
 
 
-        file_schema = FileBase(
+        file_schema = FileCreate(
             name=file.filename,
             path=pathToSave,
+            dataset_id=dataset_id
             #product_id=product_id
         )
 
@@ -227,6 +331,7 @@ async def upload_file_endpoint(
 @app.post("/api/column_types" , response_model=ColumnType)
 async def create_column_type_endpoint(
     column_type: ColumnTypeCreate,
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return column_type_crud.create_column_type(db=db, column_type=column_type)
@@ -236,6 +341,7 @@ async def create_column_type_endpoint(
 @app.post("/api/value_types" , response_model=ValueType)
 async def create_value_type_endpoint(
     value_type: ValueTypeCreate,
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return value_type_crud.create_value_type(db=db, value_type=value_type)
@@ -254,6 +360,7 @@ async def create_value_type_endpoint(
 @app.post("/api/columns" , response_model=Column)
 async def create_column_endpoint(
     column: ColumnCreate,
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return column_crud.create_column(db=db, column=column)
@@ -265,6 +372,7 @@ async def create_column_endpoint(
 @app.get("/api/columns/{column_id}", response_model=Column)
 async def get_column_endpoint(
     column_id: str,
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return column_crud.get_column(db=db, column_id=column_id)
@@ -273,6 +381,7 @@ async def get_column_endpoint(
 
 @app.get("/api/columns", response_model=list[Column])
 async def get_all_columns_endpoint(
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return column_crud.get_all_columns(db=db)
@@ -285,6 +394,7 @@ async def get_all_columns_endpoint(
 @app.post("/api/datasets" , response_model=Dataset)
 async def create_dataset_endpoint(
     dataset: DatasetCreate,
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return dataset_crud.create_dataset(db=db, dataset=dataset)
@@ -295,6 +405,7 @@ async def create_dataset_endpoint(
 
 async def get_datasets_by_project_id_endpoint(
     project_id: str,
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return dataset_crud.get_datasets_by_project_id(db=db, project_id=project_id)

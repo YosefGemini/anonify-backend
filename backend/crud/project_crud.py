@@ -38,6 +38,10 @@ def get_all_projects(db: Session):
     return db.query(project_model.Project).all()
 
 
+def get_all_projects_by_author(db: Session, author_id: str):
+    return db.query(project_model.Project).filter(project_model.Project.author_id == author_id).all()
+
+
 def update_project(db: Session, project: ProjectUpdate):
 
     db_project = db.query(project_model.Project).filter(project_model.Project.id == project.id).first()

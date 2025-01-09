@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from uuid import UUID
-from schemas.file import FileBase , File_DB, FileUpdate, FileDelete
+from schemas.file import FileBase , File_DB, FileUpdate, FileDelete, FileCreate
 from models import file_model
 
 
@@ -10,7 +10,7 @@ from models import file_model
 # Crea un cliente de S3 (o cualquier otro servicio de AWS)
 
 
-def create_files(db: Session, file: FileBase):
+def create_files(db: Session, file: FileCreate):
 
 
     
@@ -24,6 +24,9 @@ def create_files(db: Session, file: FileBase):
     db_file = file_model.File(
         name=file.name,
         path=file.path,
+        size=file.size,
+        is_public=file.is_public,
+        dataset_id=file.dataset_id
         #product_id=file.product_id
     )
     db.add(db_file)

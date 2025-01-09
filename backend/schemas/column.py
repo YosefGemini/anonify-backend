@@ -9,9 +9,9 @@ class ColumnBase(BaseModel):
 
 class ColumnCreate(ColumnBase):
     # dataset_id: str
-    column_type_id: str
+    column_type_id: UUID
     # query_id: str
-    value_type_id: str
+    value_type_id: UUID
 
 class Column(ColumnBase):
     id: UUID

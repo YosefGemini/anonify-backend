@@ -20,12 +20,8 @@ class Database(DatabaseBase):
     created_at: str
     updated_at: str = None
 
-
-
     class Config:
         orm_mode = True
-
-
 
 class DatabaseUpdate(DatabaseBase):
     id: str

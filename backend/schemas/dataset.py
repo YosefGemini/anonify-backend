@@ -9,8 +9,8 @@ class DatasetBase(BaseModel):
 
 class DatasetCreate(DatasetBase):
     
-    project_id: str
-    query_id: str = None
+    project_id: UUID
+    query_id: UUID = None
     columns: list[ColumnCreate]
     
 
@@ -18,7 +18,7 @@ class Dataset(DatasetBase):
     id: UUID
     files: list[File_DB]
     columns: list[Column]
-    query_id: str = None
+    query_id: UUID = None
 
     class Config:
         orm_mode = True

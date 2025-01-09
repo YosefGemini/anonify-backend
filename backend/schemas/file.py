@@ -7,6 +7,15 @@ class FileBase(BaseModel):
     name: str
     path: str
     created_at: str
+    size: int
+    is_public: bool
+    
+
+
+class FileCreate(FileBase):
+    dataset_id: UUID
+    
+    
     
 
 
@@ -14,6 +23,7 @@ class FileBase(BaseModel):
 
 class File_DB(FileBase):
     id: UUID
+    # dataset_id: UUID
 
     class Config:
         orm_mode = True
