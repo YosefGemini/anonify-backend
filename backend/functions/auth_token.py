@@ -7,9 +7,8 @@ from conf import settings
 
 
 
-
-SECRET_KEY = 'e0e5f53b239df3dc39517c34ae0a1c09d1f5d181dfac1578d379a4a5ee3e0ef5'
-ALGORITHM = 'HS256'
+SECRET_KEY = settings.TOKEN_SECRET_KEY
+ALGORITHM = settings.ALGORITHM
 
 
 def generate_access_token(

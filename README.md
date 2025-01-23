@@ -40,7 +40,27 @@ Se encuentra todo lo relacionado con el backend de la aplicación, en el cual se
 ya dentro del entorno virtual ejecute el siguiente comando: ```pip install -r requirements.txt```
 para instalar las dependencias necesarias
 
-### 2.1.4 Ejecución de la aplicación
+
+### 2.1.4 Preparacion Variables de entorno 
+
+crear un archivo de tipo  ```.env``` y agregar los sigueintes parametros de entorno:
+
+
+```
+# CENTRAL DATABASE
+CENTRAL_DATABASE_URL="(servidorsql)://(usuario):(contraseña)@(dirección):(puerto)/(DB name)"
+CENTRAL_DATABASE_NAME=(nombre de la base de datos)
+#AWS S3
+AWS_STORAGE_BUCKET_NAME=(nombre del bucket)
+AWS_DEFAULT_REGION=(nombre de la region)
+AWS_ACCESS_KEY_ID=(id de acceso)
+AWS_SECRET_ACCESS_KEY=
+#TOKEN SECRET KEY
+TOKEN_SECRET_KEY=(llave del token)
+ALGORITHM=(algoritmo de cifrado)
+```
+
+### 2.1.5 Ejecución de la aplicación
 
 * para ejecutar la aplicación ejecute el siguiente comando: ```uvicorn main:app --host 0.0.0.0 --port (puerto de su preferencia, ej 2003) --reload```
 

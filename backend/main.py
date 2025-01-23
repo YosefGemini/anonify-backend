@@ -10,13 +10,19 @@ from fastapi import (
     Body,
     status,
     UploadFile,
+    WebSocket, 
+    WebSocketDisconnect
 )
+import asyncio
 from sqlalchemy.orm import Session
+from typing import List
 from db.db import engine, get_db, Base
 # from fastapi.staticfiles import StaticFiles
 #from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 import os
+import aiofiles
 from os import path
 from functions import auth_token, auth
 
@@ -25,7 +31,7 @@ from functions import auth_token, auth
 
 
 # Schemas import
-from schemas.file import FileBase, File_DB, FileCreate
+from schemas.file import FileBase, FileDB, FileCreate
 from schemas.author import AuthorBase, Author, AuthorCreate, AuthorUpdate, AuthorDelete, AuthorPublic, AuthorToken, AuthCredentials
 from schemas.project import ProjectBase, Project, ProjectCreate, ProjectUpdate, ProjectDelete, ProjectInformation
 from schemas.dataset import DatasetBase, Dataset, DatasetCreate
@@ -52,11 +58,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Lista para rastrear conexiones de WebSockets
+active_connections: List[WebSocket] = []
 
 @app.get("/")
 def get_main():
     return {"Hello": "World"}
 
+
+
+
+async def notify_progress(file_size: int, bytes_received: int, websocket: WebSocket):
+    """
+    Notifica al cliente el progreso de la subida.
+    """
+    progress = (bytes_received / file_size) * 100
+    await websocket.send_json({"bytes_received": bytes_received, "progress": f"{progress:.2f}%"})
+
+# WebSocket endpoint para actualizar el progreso de la subida
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """
+    WebSocket para enviar actualizaciones de progreso.
+    """
+    await websocket.accept()
+    active_connections.append(websocket)
+    try:
+        while True:
+            # Mantén la conexión abierta
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        active_connections.remove(websocket)
 
 
 
@@ -250,30 +283,146 @@ async def delete_project(
 
 # Files endpoints
 
-# Creado y guarda un archivo en la carpeta uploads/files
+# Upload File in the folder uploads/files when the files are bigger than 100MB
 
-@app.post("/api/files/{dataset_id}" , response_model=list[File_DB])
+
+@app.post("/file/uploadfile/V3")
+async def create_upload_file(websocket_id: str, file: UploadFile = File(...)):
+    chunk_size = 1024 * 1024  # 1 MB
+    # base_name, extension = os.path.splitext(file.filename)
+    pathToSave = path.join(pathname, "uploads", "files", file.filename)
+    file_size = file.size
+    bytes_received = 0
+
+    base_name, extension = os.path.splitext(file.filename)
+
+    print(f"base_name: {base_name}")
+    print(f"extension: {extension}")
+    number = 1
+        # la funcion os.path.join(path1, path2, ...) une los paths en un solo path
+    pathToSave = path.join(pathname, "uploads", "files", file.filename)
+
+
+
+        # la funcion os.path.exists(path) devuelve True si el path existe, y False si no existe
+    while os.path.exists(pathToSave):
+        file.fllename = f"{base_name}_{number}{extension}"
+        number += 1
+        pathToSave = path.join(pathname, "uploads", "files", file.filename)
+
+        # la funcion os.makedirs(path) crea un directorio en el path especificado
+        
+    if not path.exists(os.path.dirname(pathToSave)):
+        os.makedirs(os.path.dirname(pathToSave))
+
+    print("Creando archivo",f"file.filename: {file.filename}","\n")
+    # totalbytes = 0
+    print("con el siguiente path", pathToSave, "\n")
+
+
+
+    # Busca el WebSocket correspondiente al cliente
+    websocket = next((ws for ws in active_connections if str(ws.id) == websocket_id), None)
+    if not websocket:
+        return {"error": "WebSocket no conectado."}
+    
+
+    
+    # Abrimos el archivo en modo escritura binaria
+    with open(pathToSave, "wb") as buffer:
+        # Leemos el archivo en partes para no sobrecargar la memoria
+        while chunk := await file.read(chunk_size):
+            counter+=1 
+            print(f"counter: {counter}")
+            # Lee 1MB por iteración
+            buffer.write(chunk)
+            bytes_received += len(chunk)
+            await notify_progress(file_size, bytes_received, websocket)
+
+            # yield f"Uploaded in {counter}  chunks \n"  # Corrected calculation
+
+    return {"message": f"Archivo {file.filename} guardado exitosamente."}
+
+
+
+# Upload File in the folder uploads/files when the files are smaller than 100MB
+
+@app.post("/file/uploadfile/V2")
+async def create_upload_file(file: UploadFile = File(...)):
+    chunk_size = 1024 * 1024  # 1 MB
+    # base_name, extension = os.path.splitext(file.filename)
+    pathToSave = path.join(pathname, "uploads", "files", file.filename)
+    file_size = file.size
+    bytes_received = 0
+
+
+    base_name, extension = os.path.splitext(file.filename)
+
+    print(f"base_name: {base_name}")
+    print(f"extension: {extension}")
+    number = 1
+        # la funcion os.path.join(path1, path2, ...) une los paths en un solo path
+    pathToSave = path.join(pathname, "uploads", "files", file.filename)
+
+
+
+        # la funcion os.path.exists(path) devuelve True si el path existe, y False si no existe
+    while os.path.exists(pathToSave):
+        file.fllename = f"{base_name}_{number}{extension}"
+        number += 1
+        pathToSave = path.join(pathname, "uploads", "files", file.filename )
+
+        # la funcion os.makedirs(path) crea un directorio en el path especificado
+        
+    if not path.exists(os.path.dirname(pathToSave)):
+        os.makedirs(os.path.dirname(pathToSave))
+
+    print("Creando archivo",f"file.filename: {file.filename}","\n")
+    # totalbytes = 0
+    print("con el siguiente path", pathToSave, "\n")
+
+
+
+    async def save_file(file: UploadFile, pathToSave: str):
+        async with aiofiles.open(pathToSave, "wb") as buffer:
+            count = 0
+            while chunk := await file.read(chunk_size):
+                count += 1
+
+                # es para ver a menor velocidad el flujo 
+                await asyncio.sleep(1)
+                await buffer.write(chunk)
+                # bytes_received += len(chunk)
+                yield f"In {count} chunks \n"
+
+    return StreamingResponse(save_file(file, pathToSave))
+
+
+
+
+# Creado y guarda un archivo en la carpeta uploads/files
+# @app.post("/api/files/{dataset_id}" , response_model=FileDB)
+@app.post("/api/files/V1/{dataset_id}")
 async def upload_file_endpoint(
     dataset_id: str,
     db: Session = Depends(get_db),
-    current_user: AuthorToken = Depends(validate_token_header),
+    # current_user: AuthorToken = Depends(validate_token_header),
     file: UploadFile = File(...),
-    #product_id: str = Form(...),
-    #current_user: UserToken = Depends(validate_token_header),
     ):
-
-    #if not current_user:
+    # Validacion si el token es valido
+    # if not current_user:
     #    raise HTTPException(
     #        status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token"
     #    )
-
     
-
     try:
+        
 
         
-            # contents es un objeto de tipo bytes que contiene el contenido del archivo
+        # contents es un objeto de tipo bytes que contiene el contenido del archivo
         contents = await file.read()
+
+        
         # la funcion os.path.splitext(path) devuelve una tupla con el nombre del archivo y su extension
         base_name, extension = os.path.splitext(file.filename)
 
@@ -281,7 +430,7 @@ async def upload_file_endpoint(
         print(f"extension: {extension}")
         number = 1
         # la funcion os.path.join(path1, path2, ...) une los paths en un solo path
-        pathToSave = path.join(pathname, "uploads", "files", file.filename)
+        pathToSave = path.join(pathname, "uploads", "files",dataset_id, file.filename)
 
 
 
@@ -289,14 +438,16 @@ async def upload_file_endpoint(
         while os.path.exists(pathToSave):
             file.fllename = f"{base_name}_{number}{extension}"
             number += 1
-            pathToSave = path.join(pathname, "uploads", "files", file.filename)
+            pathToSave = path.join(pathname, "uploads", "files",dataset_id, file.filename)
 
         # la funcion os.makedirs(path) crea un directorio en el path especificado
         
         if not path.exists(os.path.dirname(pathToSave)):
             os.makedirs(os.path.dirname(pathToSave))
-        
+        print("Creando archivo",f"file.filename: {file.filename}")
+        # chunk_size = 1024 * 1024  # 1 MB
         with open(pathToSave, "wb") as buffer:
+            
 
             print("Creando archivo",f"file.filename: {file.filename}")
             # la funcion buffer.write(bytes) escribe los bytes en el archivo
@@ -304,17 +455,23 @@ async def upload_file_endpoint(
             print("Archivo creado")
             # la funcion buffer.close() cierra el archivo
             buffer.close()
+        # buffer.close()
 
 
-        file_schema = FileCreate(
+        file_schema = FileCreate( 
             name=file.filename,
             path=pathToSave,
-            dataset_id=dataset_id
-            #product_id=product_id
-        )
+            datasets_id=dataset_id,
+            is_public=True,
+            size=len(contents),
+            )
 
-        print("file_schema",file_schema)
+        print("file_schema",file_schema,"\n")
+
+        # yield await file_crud.create_files(db=db, file=file_schema)
         return file_crud.create_files(db=db, file=file_schema)
+        # return
+        # return StreamingResponse(iter([]), media_type="text/plain")
             
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
