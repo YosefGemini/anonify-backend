@@ -19,7 +19,13 @@ class Author(Base):
     password= Column(String(250), nullable=False)
     cell_phone= Column(String(250), nullable=True)
     created_at= Column(DateTime, nullable=False,server_default=func.now())
+    role_id= Column(UUID(as_uuid=True), ForeignKey('roles.id'), nullable=False)
+    
 
     #Relationships
 
     projects= relationship('Project', backref=backref('author', uselist=True))
+    role= relationship('Role', backref=backref('author', uselist=False))
+
+
+

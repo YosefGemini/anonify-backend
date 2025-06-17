@@ -36,7 +36,8 @@ def create_author(db: Session, author: AuthorCreate):
         password=passwordhash,
         mail=author.mail,
         cell_phone=author.cell_phone if author.cell_phone else None,
-        nationality=author.nationality
+        nationality=author.nationality,
+        role_id=author.role_id
     )
 
     print ("Fase 3 de la funcion de creacion: \n")
@@ -51,6 +52,7 @@ def create_author(db: Session, author: AuthorCreate):
 
 
 # FUNCIONA
+
 
 #TODO definir bien los objetos que son realmente necesarios y que se van a devolver
 def login_user(db: Session, auth_credentials: AuthCredentials):

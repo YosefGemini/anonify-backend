@@ -12,6 +12,7 @@ class Dataset(Base):
     name = Column(String(250), nullable=False)
     project_id = Column(UUID(as_uuid=True), ForeignKey('projects.id'), nullable=False)
     query_id = Column(UUID(as_uuid=True), ForeignKey('queries.id'), nullable=True)
+    status = Column(String(20), nullable=False, default='created')
     # file_id = Column(UUID(as_uuid=True), ForeignKey('files.id'), nullable=False)
     # column_id = Column(UUID(as_uuid=True), ForeignKey('columns.id'), nullable=False)
     

@@ -10,7 +10,7 @@ from models import file_model
 # Crea un cliente de S3 (o cualquier otro servicio de AWS)
 
 
-def create_files(db: Session, file: FileCreate):
+async def create_files(db: Session, file: FileCreate):
 
 
     

@@ -21,7 +21,8 @@ class Database(DatabaseBase):
     updated_at: str = None
 
     class Config:
-        orm_mode = True
+        # orm_mode = True
+        from_attributes = True
 
 class DatabaseUpdate(DatabaseBase):
     id: str

@@ -10,7 +10,8 @@ class ColumnType(ColumnTypeBase):
     id: UUID
 
     class Config:
-        orm_mode = True
+        # orm_mode = True
+        from_attributes = True
 
 class ColumnTypeUpdate(ColumnTypeBase):
     id: str

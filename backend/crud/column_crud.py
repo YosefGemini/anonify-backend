@@ -9,17 +9,17 @@ from uuid import UUID
 
 def create_column(db: Session, column: ColumnCreate):
     
-    column_in_db = db.query(column_model.Column).filter(column_model.Column.name == column.name).first()
+    # column_in_db = db.query(column_model.Column).filter(column_model.Column.id == column.id).first()
 
-    if column_in_db:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail=f"Column with name {column.name} already exists")
+    # if column_in_db:
+    #     raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+    #                         detail=f"Column with name {column.name} already exists")
 
     db_column = column_model.Column(
         name=column.name,
         dataset_id=column.dataset_id,
         column_type_id=column.column_type_id,
-        query_id=column.query_id,
+        # query_id=column.query_id,
         value_type_id=column.value_type_id
     )
 

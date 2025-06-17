@@ -39,6 +39,27 @@ def create_column_type(db: Session, column_type: ColumnTypeCreate):
 def get_column_types(db: Session):
     return db.query(column_type_model.ColumnType).all()
 
+def get_column_type_by_name(db: Session, name: str):
+    db_column_type = db.query(column_type_model.ColumnType).filter(column_type_model.ColumnType.name == name).first()
+
+    if not db_column_type:
+
+        try:
+
+            new_column_type= create_column_type(db=db,column_type=ColumnTypeCreate(
+                name=name
+            ))
+            return new_column_type
+        except:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Column_Type with name: {name} had an error when tried to be created")
+
+
+        
+        
+        
+
+    return db_column_type
 def update_column_type(db: Session, column_type: ColumnTypeUpdate):
     db_column_type = db.query(column_type_model.ColumnType).filter(column_type_model.ColumnType.id == column_type.id).first()
     db_column_type.name = column_type.name

@@ -36,6 +36,24 @@ def create_value_type(db: Session, value_type: ValueTypeCreate):
 def get_value_types(db: Session):
     return db.query(value_type_model.ValueType).all()
 
+def get_value_type_by_name(db: Session, name: str):
+    db_column_type = db.query(value_type_model.ValueType).filter(value_type_model.ValueType.name == name).first()
+
+    if not db_column_type:
+
+        try:
+
+            new_column_type= create_value_type(db=db,column_type=ValueType(
+                name=name
+            ))
+
+            return new_column_type
+        except:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Value_Type with name: {name} had an error when tried to be created")
+
+
+    return db_column_type
 
 def update_value_type(db: Session, value_type: ValueTypeUpdate):
     db_value_type = db.query(value_type_model.ValueType).filter(value_type_model.ValueType.id == value_type.id).first()

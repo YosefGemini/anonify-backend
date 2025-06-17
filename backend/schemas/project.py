@@ -17,14 +17,17 @@ class Project(ProjectBase):
     # author: 
 
     class Config:
-        orm_mode = True
+        # orm_mode = True
+        from_attributes = True
 
 
 class ProjectInformation(ProjectBase):
     id: UUID
+    author_id: UUID
     datasets: list[Dataset]
     class Config:
-        orm_mode = True
+        # orm_mode = True
+        from_attributes = True
 
 
 class ProjectUpdate(ProjectBase):

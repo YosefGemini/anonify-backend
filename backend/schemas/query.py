@@ -20,7 +20,8 @@ class Query(QueryCreate):
     columns: list[Column]
 
     class Config:
-        orm_mode = True
+        # orm_mode = True
+        from_attributes = True
 class QueryUpdate(QueryBase):
     id: str
 
