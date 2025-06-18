@@ -26,6 +26,7 @@ class Author(Base):
 
     projects= relationship('Project', backref=backref('author', uselist=True))
     role= relationship('Role', backref=backref('author', uselist=False))
+    shared=relationship('Project', secondary='shared_projects',back_populates='authors')
 
 
 

@@ -428,7 +428,7 @@ async def get_all_projects_endpoint(
 
 async def get_all_projects_by_author_endpoint(
     author_id: str,
-    # current_user: AuthorToken = Depends(validate_token_header),
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return project_crud.get_all_projects_by_author(db=db, author_id=author_id)
@@ -437,19 +437,19 @@ async def get_all_projects_by_author_endpoint(
 @app.put("/api/projects", response_model=Project)
 async def update_project_endpoint(
     project: ProjectUpdate,
-    # current_user: AuthorToken = Depends(validate_token_header),
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return project_crud.update_project(db=db, project=project)
 
 # DELETE PROJECT
-@app.delete("/api/projects", response_model=Project)
+@app.delete("/api/projects/{project_id}", response_model=Project)
 async def delete_project(
-    project: ProjectDelete,
-    # current_user: AuthorToken = Depends(validate_token_header),
+    project_id: str,
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
-    return project_crud.delete_project(db=db, project_id=project.id)
+    return project_crud.delete_project(db=db, project_id=project_id)
 
 
 # Files endpoints
@@ -658,7 +658,7 @@ async def process_file_in_background(
 
     user_id = str(current_user_id)
     pj_id = str(project_id)
-    print("id de usuario: ",user_id, "id de proyecto", pj_id)
+    # print("id de usuario: ",user_id, "id de proyecto", pj_id)
 
     file_name = original_filename
     save_dir = path.join(pathname,"uploads","files",pj_id) # Usar Path para mejor manejo de rutas
@@ -674,7 +674,7 @@ async def process_file_in_background(
     # save_dir.mkdir(parents=True, exist_ok=True)
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
-    print("Primer momento que se llama la funcion send_progress_to_websocket")
+    # print("Primer momento que se llama la funcion send_progress_to_websocket")
     await send_progress_to_websocket(operation_id, 0,"Processing", f"Guardando archivo {original_filename}...")
     print(f"[{operation_id}] Saving file to: {pathToSave}")
 
@@ -691,9 +691,9 @@ async def process_file_in_background(
             progress = int((bytes_written / total_size) * 90) # Hasta el 90% para dejar espacio para la DB
             print(f"envio a websocket dentro del bucle [{operation_id}] Progress: {progress}%")
             await send_progress_to_websocket(operation_id, progress, "Saving File", f"Progreso: {progress}%")
-            await asyncio.sleep(0.01) # Pequeña pausa para permitir que el loop de eventos envíe mensajes
+            await asyncio.sleep(0.05) # Pequeña pausa para permitir que el loop de eventos envíe mensajes
 
-    print("tercera vez que se llama la funcion send_progress_to_websocket")
+    # print("tercera vez que se llama la funcion send_progress_to_websocket")
     await send_progress_to_websocket(operation_id, 90, "Creating Dataset", "Archivo guardado. Creando entrada en la base de datos...")
     # await send_steps_to_session(operation_id, "Archivo guardado. Creando entrada en la base de datos...")
     print(f"[{operation_id}] File {original_filename} saved.")
@@ -711,7 +711,7 @@ async def process_file_in_background(
             ),
         )
         print(f"[{operation_id}] Dataset ID created: {str(dataset_in_db.id)}")
-        print("Cuarta vez que se llama la funcion send_progress_to_websocket")
+        # print("Cuarta vez que se llama la funcion send_progress_to_websocket")
         await send_progress_to_websocket(operation_id, 95, "Creating File Entry", f"Dataset {dataset_in_db.id} creado. Registrando archivo...")
 
         file_schema = FileCreate(
@@ -727,13 +727,13 @@ async def process_file_in_background(
 
         file =await file_crud.create_files(db=db, file=file_schema)
         print(f"[{operation_id}] File entry created successfully in DB.")
-        print('la url del archivo es:', file.path)
+        # print('la url del archivo es:', file.path)
         await send_progress_to_websocket(operation_id, 96, "Analyzing File", "Analizando el contenido del dataset")
-        columns_info = await analyze_dataset(file.path)
+        [columns_info,total_rows] = await analyze_dataset(file.path)
         print(columns_info)
         for column in columns_info:
 
-            print("Informacion de la columna:", column)
+            # print("Informacion de la columna:", column)
 
 
             column_type= column_type_crud.get_column_type_by_name(db=db, name=column['data_type'])
@@ -751,20 +751,20 @@ async def process_file_in_background(
         #actualizacion de estado del dataset
         dataset_to_update = DatasetUpdate(
             id=dataset_in_db.id,
-            status='uploaded'
+            status='uploaded',
+            rows=total_rows
         )
 
 
         await dataset_crud.update_dataset_status(db=db,dataset=dataset_to_update)
-        print("Quinta vez que se llama la funcion send_progress_to_websocket")
+        # print("Quinta vez que se llama la funcion send_progress_to_websocket")
         await send_progress_to_websocket(operation_id, 100, "Completed", "Proceso completado con éxito.")
 
     except Exception as e:
         print(f"[{operation_id}] Error during background processing: {e}")
-        print("Error al enviar el mensaje de progreso al WebSocket")
+        # print("Error al enviar el mensaje de progreso al WebSocket")
         await send_progress_to_websocket(operation_id, 0, "Error", f"Error en el proceso: {e}")
-        #TODO
-        # Aquí añadir lógica para limpiar el archivo parcialmente guardado si falla
+        
 
 
 @app.post("/api/testv1/dataset/uploadfile/{project_id}")
@@ -993,7 +993,7 @@ async def get_dataset_preview_endpoint(
     rows: int = 10,
 
 ):
-    return dataset_crud.get_dataset_preview(dataset_id=dataset_id,db=db, page_index=page_index, rows_per_page=rows)
+    return await dataset_crud.get_dataset_preview(dataset_id=dataset_id,db=db, page_index=page_index, rows_per_page=rows)
     
     
 

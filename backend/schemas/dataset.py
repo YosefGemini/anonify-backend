@@ -26,7 +26,8 @@ class Dataset(DatasetBase):
     # query_id: UUID = None
     files: list[FileDB]
     columns: list[Column]
-    status: str 
+    status: str
+    rows: int
     
     class Config:
         from_attributes = True
@@ -39,9 +40,11 @@ class DatasetPreviewResponse(BaseModel):
     total_pages: int
 
 
+
 class DatasetUpdate(BaseModel):
     id: UUID
     status: str
+    rows: int
 
 
                  
