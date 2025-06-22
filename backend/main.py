@@ -271,12 +271,12 @@ async def change_password_endpoint(
 
 # Author endpoints
 
-# CREATE AUTHOR
+# CREATE AUTHOR (ADMINISTRATION)
 
-@app.post("/api/authors" , response_model=Author)
+@app.post("/api/administration/authors" , response_model=Author)
 async def create_author_endpoint(
     author: AuthorCreate,
-    # current_user: AuthorToken = Depends(validate_token_header),
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),   
 ):
     print("author", author)
@@ -296,6 +296,17 @@ async def get_author_endpoint(
 
 # GET ALL AUTHORS
 
+@app.get("/api/public/test/author", response_model=AuthorPublicInformation)
+async def get_author_public_information_endpoint(
+    current_user: AuthorToken = Depends(validate_token_header),
+    db: Session = Depends(get_db),
+):
+    author_id= str(current_user.id)
+    """
+    Obtiene la información pública del autor.
+    """
+    return author_crud.get_author(db=db, author_id=author_id)
+
 @app.get("/api/public/author", response_model=AuthorPublicInformation)
 async def get_author_public_information_endpoint(
     current_user: AuthorToken = Depends(validate_token_header),
@@ -313,6 +324,14 @@ async def get_all_authors_endpoint(
     db: Session = Depends(get_db),
 ):
     return author_crud.get_all_authors(db=db)
+
+@app.get("/api/administration/authors",  response_model=list[AuthorPublicInformation])
+async def get_all_authors_endpoint(
+    current_user: AuthorToken = Depends(validate_token_header),
+    db: Session = Depends(get_db),
+):
+    return author_crud.get_all_authors(db=db)
+
 
 # UPDATE AUTHOR
 
