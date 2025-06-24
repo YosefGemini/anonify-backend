@@ -357,31 +357,31 @@ async def delete_author(
 # ROLES endpoints
 
 # CREATE ROLE
-@app.post("/api/test/roles" , response_model=ColumnType)
+@app.post("/api/administration/roles" , response_model=ColumnType)
 async def create_role_endpoint(
     role: ColumnTypeCreate,
-    # current_user: AuthorToken = Depends(validate_token_header),
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return role_crud.create_role(db=db, role=role)
 # GET ROLE
-@app.get("/api/test/roles/{role_id}", response_model=Role)
+@app.get("/api/administration/roles/{role_id}", response_model=Role)
 async def get_role_endpoint(
     role_id: str,
-    # current_user: AuthorToken = Depends(validate_token_header),
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
     return role_crud.get_role(db=db, role_id=role_id)
 # GET ALL ROLES
-@app.get("/api/test/roles", response_model=list[Role])
+@app.get("/api/administration/roles", response_model=list[Role])
 async def get_all_roles_endpoint(
-    # current_user: AuthorToken = Depends(validate_token_header),
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 ):
-    return role_crud.get_all_roles(db=db)
+    return role_crud.get_roles(db=db)
 
 # UPDATE ROLE
-@app.put("/api/test/roles", response_model=Role)
+@app.put("/api/administration/roles", response_model=Role)
 async def update_role_endpoint(
     role: RoleUpdate,
     # current_user: AuthorToken = Depends(validate_token_header),
@@ -389,7 +389,7 @@ async def update_role_endpoint(
 ):
     return role_crud.update_role(db=db, role=role)
 # DELETE ROLE
-@app.delete("/api/test/roles", response_model=Role)
+@app.delete("/api/administration/roles", response_model=Role)
 async def delete_role(
     role: RoleDelete,
     # current_user: AuthorToken = Depends(validate_token_header),
