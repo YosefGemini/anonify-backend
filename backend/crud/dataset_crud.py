@@ -2,10 +2,14 @@ from models import dataset_model
 from models import query_model
 from models import column_model
 from schemas.dataset import DatasetBase, DatasetCreate, DatasetPreviewResponse, DatasetUpdate
+from schemas.column import ColumnDelete
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from uuid import UUID
 from pathlib import Path
+
+from crud.column_crud import delete_column
+from crud.file_crud import delete_file
 import math
 
 from functions.dataset_manage import read_csv_for_all_codifications
@@ -44,6 +48,7 @@ async def update_dataset_status(db: Session, dataset: DatasetUpdate):
                             detail=f"Dataset with id {dataset.id} not found")
     
     dataset_in_db.status = dataset.status
+    dataset_in_db.rows = dataset.rows
     db.commit()
     db.refresh(dataset_in_db)
 
@@ -60,23 +65,46 @@ def delete_dataset(db:Session, dataset_id: UUID):
 
     print("Flies a eliminar",files_to_delete)
     print("columnas a eliminar", columns_to_delete)
-    #TODO
-    # for file in files_to_delete:
+    print("tamaño del arreglo de archivos:", len(files_to_delete))
+    print("tamaño del arreglo de archivos:", len(columns_to_delete))
+
+    print("tamaño del arreglo es diferente de cero?:", len(files_to_delete) !=0)
+    print("tamaño del arreglo es diferente de cero?:", len(columns_to_delete)!=0)
 
 
+    if (len(files_to_delete) != 0):
+        print("Entra al if del file")
+        for file in files_to_delete:
+            try:
+
+                print("eliminando FILE:", file.id)
+                delete_file(db=db, file_id=file.id)
+            except Exception as e:
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error with file {file.id} while try to be deleted with error: {e}")
+            continue
+    if (len(columns_to_delete) != 0):
+        print("Entra al if del column")
+        for column in columns_to_delete:
+            try:
+                print("eliminando COLUMN:", column.id)
+                column_id = str(column.id)
+                delete_column(db=db, column=ColumnDelete(id=column_id))
+            except Exception as e:
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error with file {column.id} while try to be deleted with error: {e}")
+            continue
+
+    db.delete(dataset_in_db)
+    db.commit()
 
     return dataset_in_db
-    
-
-
 
 def get_datasets_by_project_id(db: Session, project_id: str):
 
-    print("fase 1")
+    # print("fase 1")
     db_dataset = db.query(dataset_model.Dataset).filter(dataset_model.Dataset.project_id == project_id).all()
 
-    print("fase 2")
-    print("Dataset encontrado: " + str(db_dataset))
+    # print("fase 2")
+    # print("Dataset encontrado: " + str(db_dataset))
     if not db_dataset:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"Dataset with project_id {project_id} not found")
@@ -94,11 +122,8 @@ def get_dataset_information(db: Session, dataset_id:str):
     return db_dataset
 
 
-def get_dataset_preview(db: Session, dataset_id: str, page_index: int, rows_per_page: int):
+async def get_dataset_preview(db: Session, dataset_id: str, page_index: int, rows_per_page: int):
     db_dataset = get_dataset_information(db=db, dataset_id=dataset_id)
-
-    print("fa")
-
 
     #manejo de errores
     if not db_dataset:
@@ -111,9 +136,11 @@ def get_dataset_preview(db: Session, dataset_id: str, page_index: int, rows_per_
     if not file_path.exists():
         raise HTTPException(status_code=404, detail=f"File not found at path: {file_path}")
     try:
-        dataset_tuple = read_csv_for_all_codifications(url=str(file_path))
+        print("[TEST]: Tamaño del Dataset:",db_dataset.rows,"Indice de Consulta:",page_index,"Filas por pagina",rows_per_page)
+        dataset_tuple =await read_csv_for_all_codifications(url=str(file_path),nrows=rows_per_page,skiprows=(page_index-1)*rows_per_page)
         df = dataset_tuple[0]
-        total_rows = len(df)
+        print("[TEST]: Tamaño del Fragmento enviado", len(df))
+        total_rows = db_dataset.rows
         total_pages = math.ceil(total_rows / rows_per_page)
 
         # Calculo del indice de inicio y fin de la paginacion
@@ -124,11 +151,15 @@ def get_dataset_preview(db: Session, dataset_id: str, page_index: int, rows_per_
 
         # Obtener las filas del DataFrame de Pandas
         # .iloc[] es para indexación basada en posición
-        preview_df = df.iloc[start_index:end_index]
+        # preview_df = df.iloc[start_index:end_index]
+        preview_df = df
 
         # Convertir el DataFrame de Pandas a una lista de diccionarios
         # .to_dict(orient='records') es perfecto para esto
+
         preview_data = preview_df.to_dict(orient='records')
+
+        
 
         return DatasetPreviewResponse( 
             preview= preview_data,

@@ -17,24 +17,21 @@ async def analyze_dataset(dataset_url):
     # Mapear tipos de pandas a tipos generales
     tipo_general = {
         'object': 'string',
-        'int64': 'number',
-        'float64': 'number',
+        'int64': 'number(integer)',
+        'float64': 'number(float)',
         'bool': 'boolean',
         'datetime64[ns]': 'datetime',
     }
     try:
         # df= pd.read_csv(dataset_url, encoding='utf-8', low_memory=False)
         # Si el archivo es muy grande, podrías considerar leer solo una muestra 
-         
         #quiero definir encoding si es utf-8 o latin-1
-
-        dataset = read_csv_for_all_codifications(url=dataset_url)
+        dataset =await read_csv_for_all_codifications(url=dataset_url)
 
         df = dataset[0]
+        total_rows = len(df)
 
-        
-
-        
+        print("codification", dataset[1])
         # df = pd.read_csv(dataset_url, encoding='utf-8', nrows=1000) 
 
          # Leer solo las primeras 1000 filas
@@ -47,21 +44,21 @@ async def analyze_dataset(dataset_url):
             mapped_type = tipo_general.get(pandas_type, pandas_type)
             columns_info.append({
                 "name": column,
-                "data_type":  pandas_type
+                "data_type":  mapped_type
             })
         # return {
         #     # "codificacion": c,
         #     "total_col": len(df.columns),
         #     "columns": columns_info
         # }
-        return columns_info
+        return columns_info, total_rows
 
 
 
 
 
-    except pd.errors.ParserError:
-        raise HTTPException(status_code=400, detail="El archivo no tiene formato CSV válido")
+    except pd.errors.ParserError as e:
+        raise HTTPException(status_code=400, detail=F"El archivo no tiene formato CSV válido {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al procesar archivo: {e}")
     
@@ -69,9 +66,55 @@ async def analyze_dataset(dataset_url):
 def detect_codification(ruta):
     with open(ruta, 'rb') as f:
         resultado = chardet.detect(f.read(10000))
+
+        print("Codificacion:",resultado['encoding'])
     return resultado['encoding']    
 
-def read_csv_for_all_codifications(url):
+
+def detect_delimiter(file_path: str, encoding: str, sample_size: int = 1024 * 5) -> str:
+
+    common_delimiters = [',', ';', '\t', '|'] # Delimitadores a probar
+
+    try:
+        with open(file_path, 'r', encoding=encoding, newline='') as f:
+            # Lee un trozo del archivo con la codificación detectada
+            sample_content = f.read(sample_size)
+            
+            sniffer = csv.Sniffer()
+            dialect = None
+            try:
+                # Intentar detectar el delimitador usando el sniffer
+                dialect = sniffer.sniff(sample_content, delimiters=common_delimiters)
+                return dialect.delimiter
+            except csv.Error:
+                # Si Sniffer falla, intenta manualmente con los delimitadores comunes
+                print(f"Sniffer no pudo detectar el delimitador con '{encoding}'. Probando manualmente...")
+                for sep in common_delimiters:
+                    # Intenta leer unas pocas líneas con este separador
+                    # Usamos io.StringIO para simular un archivo para pd.read_csv desde el sample
+                    try:
+                        temp_df = pd.read_csv(io.StringIO(sample_content), sep=sep, nrows=5)
+                        if len(temp_df.columns) > 1:
+                            return sep # Delimitador encontrado
+                    except Exception:
+                        continue
+                # Si nada funciona, retorna el delimitador más común como fallback
+                print("No se detectó un delimitador claro, usando coma como fallback.")
+                return ',' 
+    except Exception as e:
+        print(f"Error al intentar detectar el delimitador para {file_path}: {e}")
+        # En caso de error, puedes lanzar o retornar un delimitador por defecto
+        return ',' # Fallback si hay un error en la lectura de la muestra
+
+
+
+async def read_csv_for_all_codifications(
+        url: str,
+        skiprows: int=0,
+        nrows: int=None
+
+                                         ):
+
 
 #     codifications = [
 #         'ascii', 'big5','big5hkscs','cp037','cp273','cp424','cp437','cp500','cp720','cp737','cp775','cp850','cp852','cp855','cp856','cp857','cp858','cp860','cp861','cp862','cp863','cp864','cp865','cp866','cp869','cp874','cp875','cp932','cp949',
@@ -80,8 +123,44 @@ def read_csv_for_all_codifications(url):
 
     codification= detect_codification(url)
 
-    
-    df =pd.read_csv(url, encoding=codification)
+    print("[NOTA] la codificacion es", codification)
+
+    delimiter = detect_delimiter(url, codification)
+    print(f"[NOTA] El delimitador detectado es: '{delimiter}'")
+
+
+    if skiprows == 0:
+            # Si es la primera "página" (o se quiere leer desde el inicio),
+            # Pandas lee el encabezado automáticamente por defecto.
+            df = pd.read_csv(
+                url,
+                encoding=codification,
+                sep=delimiter,
+                on_bad_lines='skip',
+                nrows=nrows # Limita las filas a leer
+            )
+
+    else:
+        df_header = pd.read_csv(
+                url,
+                encoding=codification,
+                sep=delimiter,
+                on_bad_lines='skip',
+                nrows=0 # Lee solo el encabezado
+            )
+        columns = df_header.columns.tolist()
+        df = pd.read_csv(
+                url,
+                encoding=codification,
+                sep=delimiter,
+                on_bad_lines='skip',
+                skiprows=skiprows + 1, # Salta las filas de datos anteriores + la fila del encabezado
+                nrows=nrows,
+                header=None, # Ya hemos leído los encabezados, no queremos que Pandas los infiera
+                names=columns # Asignar los nombres de las columnas que ya detectamos
+            )
+
+    # df =pd.read_csv(url, encoding=codification,sep=delimiter, on_bad_lines='skip')
 
     return df,codification
 

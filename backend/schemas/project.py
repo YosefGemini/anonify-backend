@@ -4,6 +4,10 @@ from uuid import UUID
 
 from schemas.dataset import Dataset
 
+class ProjectUsersInfo(BaseModel):
+    id:str
+    name: str
+
 class ProjectBase(BaseModel):
     title: str
     description: str
@@ -25,6 +29,7 @@ class ProjectInformation(ProjectBase):
     id: UUID
     author_id: UUID
     datasets: list[Dataset]
+    authors: list[ProjectUsersInfo]
     class Config:
         # orm_mode = True
         from_attributes = True
@@ -35,3 +40,8 @@ class ProjectUpdate(ProjectBase):
 
 class ProjectDelete(BaseModel):
     id: str
+
+class ProjectShare(BaseModel):
+    project_id: str
+    users_id: list[str]
+

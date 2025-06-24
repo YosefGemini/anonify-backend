@@ -47,6 +47,7 @@ def update_column(db: Session, column: ColumnUpdate):
 
 def delete_column(db: Session, column: ColumnDelete):
     db_column = db.query(column_model.Column).filter(column_model.Column.id == column.id).first()
+
     db.delete(db_column)
     db.commit()
     return db_column
