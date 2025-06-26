@@ -106,6 +106,46 @@ def get_main():
     return {"Hello": "World"}
 
 
+async def validate_token_header(
+    Authorization: str = Header(),
+
+) -> AuthorToken:
+    try:
+        authorization_token = Authorization.split(" ")[1]
+        print(authorization_token)
+        if not authorization_token:
+            raise HTTPException(status_code=400, detail="Token is missing")
+        current_user = auth_token.decode_access_token(authorization_token)
+        # if current_user == None:  # el token no es valido
+        print(current_user)
+        if not current_user:  # el token no es valido
+            raise HTTPException(status_code=404, detail="Session not found")
+        user_token = AuthorToken(**current_user)
+        print(user_token)
+        return user_token
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=400, detail="Token is missing")
+
+
+# **************************** VALIDATE TOKEN **************************
+@app.get("/api/validate_token", response_model=AuthorToken)
+async def validate_token_endpoint(
+    current_user: AuthorToken = Depends(validate_token_header),
+):
+    return current_user
+
+# @app.post("/api/agregar_patada")
+# async def agregar_patada(
+#     body = Form(...),
+    
+#     # current_user: AuthorToken = Depends(validate_token_header),
+# ):
+#     return procesar_patada(value=body)
+
+
+# endpint proyectos con token
+
 
 
 
@@ -141,35 +181,41 @@ async def websocket_endpoint(websocket: WebSocket, operation_id: str):
 
 
 # permissioons endpoint
-
-@app.get("/api/permissions", response_model=list[Permission])
+# Get all Permissions
+@app.get("/api/administration/permissions", response_model=list[Permission])
 async def get_permissions_endpoint(
     db: Session = Depends(get_db),
-    # current_user: AuthorToken = Depends(validate_token_header),
+    current_user: AuthorToken = Depends(validate_token_header),
 ):
     return permission_crud.get_permissions(db=db)
-@app.get("/api/permissions/{permission_id}", response_model=Permission)
+#  GET PERMISSION BY ID 
+@app.get("/api/administration/permissions/{permission_id}", response_model=Permission)
 async def get_permission_endpoint(
     permission_id: str,
     db: Session = Depends(get_db),
-    # current_user: AuthorToken = Depends(validate_token_header),
+    current_user: AuthorToken = Depends(validate_token_header),
 ):
     return permission_crud.get_permission(db=db, permission_id=permission_id)
-@app.post("/api/permissions", response_model=Permission)
+# CREATE PERMISSSION
+@app.post("/api/administration/permissions", response_model=Permission)
 async def create_permission_endpoint(
     permission: PermissionCreate,
     db: Session = Depends(get_db),
-    # current_user: AuthorToken = Depends(validate_token_header),
+    current_user: AuthorToken = Depends(validate_token_header),
 ):
     return permission_crud.create_permission(db=db, permission=permission)
-@app.put("/api/permissions", response_model=Permission)
+# UPDATE PERMISSION
+
+@app.put("/api/administration/permissions", response_model=Permission)
 async def update_permission_endpoint(
     permission: PermissionUpdate,
     db: Session = Depends(get_db),
     # current_user: AuthorToken = Depends(validate_token_header),
 ):
     return permission_crud.update_permission(db=db, permission=permission)
-@app.delete("/api/permissions", response_model=Permission)
+
+# DELETE PERMISSION
+@app.delete("/api/administration/permissions", response_model=Permission)
 async def delete_permission_endpoint(
     permission: PermissionDelete,
     db: Session = Depends(get_db),
@@ -179,44 +225,7 @@ async def delete_permission_endpoint(
 
 # Session endopints 
 
-async def validate_token_header(
-    Authorization: str = Header(),
 
-) -> AuthorToken:
-    try:
-        authorization_token = Authorization.split(" ")[1]
-        print(authorization_token)
-        if not authorization_token:
-            raise HTTPException(status_code=400, detail="Token is missing")
-        current_user = auth_token.decode_access_token(authorization_token)
-        # if current_user == None:  # el token no es valido
-        print(current_user)
-        if not current_user:  # el token no es valido
-            raise HTTPException(status_code=404, detail="Session not found")
-        user_token = AuthorToken(**current_user)
-        print(user_token)
-        return user_token
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=400, detail="Token is missing")
-
-# **************************** VALIDATE TOKEN **************************
-@app.get("/api/validate_token", response_model=AuthorToken)
-async def validate_token_endpoint(
-    current_user: AuthorToken = Depends(validate_token_header),
-):
-    return current_user
-
-# @app.post("/api/agregar_patada")
-# async def agregar_patada(
-#     body = Form(...),
-    
-#     # current_user: AuthorToken = Depends(validate_token_header),
-# ):
-#     return procesar_patada(value=body)
-
-
-# endpint proyectos con token
 
 #TODO
 @app.get("/api/user/projects", response_model= AuthorPublic)
