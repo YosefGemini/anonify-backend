@@ -46,15 +46,16 @@ from schemas.column_type import ColumnTypeBase, ColumnType, ColumnTypeCreate, Co
 from schemas.query import QueryBase, QueryCreate, QueryUpdate, QueryDelete
 from schemas.value_type import ValueTypeBase, ValueType, ValueTypeCreate, ValueTypeUpdate, ValueTypeDelete
 from schemas.permission import PermissionBase, Permission, PermissionCreate, PermissionUpdate, PermissionDelete
+from schemas.entity import EntityCreate, Entity
 # este archivo falta crear
 
 from functions.connetions import register_connection, remove_connection, notify_disconnect, send_progress_to_websocket
 from functions.dataset_manage import analyze_dataset
 
 
-from crud import file_crud, author_crud, role_crud ,project_crud, dataset_crud, column_crud, column_type_crud, value_type_crud, permission_crud
+from crud import file_crud, author_crud, role_crud ,project_crud, dataset_crud, column_crud, column_type_crud, value_type_crud, permission_crud, entity_crud
 # from crud.patada_crud import procesar_patada 
-from models import file_model, author_model, column_model, column_type_model, query_model, value_type_model, db_model, dataset_model
+from models import file_model, author_model, column_model, column_type_model, query_model, value_type_model, db_model, dataset_model, entity_model
 from functions.init_function import init_roles_and_permissions
 app = FastAPI()
 Base.metadata.create_all(bind=engine)
@@ -405,8 +406,44 @@ async def delete_role(
     db: Session = Depends(get_db),
 ):
     return role_crud.delete_role(db=db, role_id=role.id)
-# Project endpoints
 
+
+
+#entities endpoints
+@app.get("/api/administration/entity",response_model=list[Entity])
+async def get_all_entities(
+    # current_user: AuthorToken = Depends(validate_token_header),
+    db: Session = Depends(get_db),
+
+):
+    return entity_crud.get_entities(db=db)
+
+@app.get("/api/administration/entity/{entity_id}", response_model=Entity)
+async def get_entities_by_uuid(
+    entity_id: str,
+    # current_user: AuthorToken = Depends(validate_token_header),
+    db: Session = Depends(get_db),
+
+):
+    return entity_crud.get_entitie_by_id(db=db, entity_id=entity_id)
+
+
+@app.post("/api/administration/entity", response_model=Entity)
+async def create_entity(
+    entity: EntityCreate,
+    db: Session = Depends(get_db),
+
+):
+    return entity_crud.create_entity(db=db, entity=entity)
+
+@app.delete("/api/administration/entity/{entity_id}", response_model=Entity)
+async def delete_entity(
+    entity_id: str,
+    db: Session = Depends(get_db),
+
+):
+    return entity_crud.delete_entity(db=db, entity_id=entity_id)
+# Project endpoints
 # CREATE PROJECT
 
 @app.post("/api/projects" , response_model=Project)

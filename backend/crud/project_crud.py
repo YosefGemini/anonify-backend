@@ -28,6 +28,8 @@ def create_project(db: Session, project: ProjectCreate):
 
 def get_project(db: Session, project_id: str):
 
+    print("Fase 1 de test ADD Entities")
+
     db_project = db.query(project_model.Project).filter(project_model.Project.id == project_id).first()
     return db_project
 
