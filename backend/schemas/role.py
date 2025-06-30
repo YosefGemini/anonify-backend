@@ -27,7 +27,7 @@ class RolePublic(BaseModel):
     # projects: list[Project] = []
 
     class Config:
-        orm_mode = True
+        from_attibutes = True
     
 
 class RoleUpdate(RoleBase):

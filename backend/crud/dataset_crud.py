@@ -100,11 +100,11 @@ def delete_dataset(db:Session, dataset_id: UUID):
 
 def get_datasets_by_project_id(db: Session, project_id: str):
 
-    # print("fase 1")
+    print("fase 1")
     db_dataset = db.query(dataset_model.Dataset).filter(dataset_model.Dataset.project_id == project_id).all()
 
-    # print("fase 2")
-    # print("Dataset encontrado: " + str(db_dataset))
+    print("fase 2")
+    print("Dataset encontrado: " + str(db_dataset))
     if not db_dataset:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"Dataset with project_id {project_id} not found")

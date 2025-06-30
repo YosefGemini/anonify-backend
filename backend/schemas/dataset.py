@@ -3,7 +3,9 @@ from pydantic import BaseModel
 from uuid import UUID
 from schemas.file import FileDB
 from schemas.column import ColumnCreate, Column
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
+
+from schemas.entity import Entity
 
 
 class DatasetBase(BaseModel):
@@ -28,10 +30,11 @@ class Dataset(DatasetBase):
     columns: list[Column]
     status: str
     rows: int
+    entity_id: Optional[UUID] = None
+    entity: Optional['Entity'] = None
     
     class Config:
         from_attributes = True
-        # orm_mode = True
         
 class DatasetPreviewResponse(BaseModel):
     preview: List[Dict[str, Any]] 
@@ -47,7 +50,21 @@ class DatasetUpdate(BaseModel):
     rows: int
 
 
-                 
+
+class DatasetParameters(BaseModel):
+    need_preprocess: bool
+    need_imputation: bool
+    imputation_method: str
+    columns: int
+    len: int
+
+
+
+class DatasetPreprocess(BaseModel):
+    userID: str
+    projectID: str
+    datasetID: str
+    parameters: DatasetParameters
     
 
 

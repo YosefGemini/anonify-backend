@@ -35,26 +35,31 @@ from functions import auth_token, auth
 
 
 
+
+
 # Schemas import
 from schemas.file import FileBase, FileDB, FileCreate
 from schemas.author import AuthorBase, Author, AuthorCreate, AuthorUpdate, AuthorDelete, AuthorPublic, AuthorToken, AuthCredentials, AuthorPublicInformation
 from schemas.role import RoleBase, Role, RoleCreate, RoleUpdate, RoleDelete
 from schemas.project import ProjectBase, Project, ProjectCreate, ProjectUpdate, ProjectDelete, ProjectInformation
-from schemas.dataset import DatasetBase, Dataset, DatasetCreate, DatasetPreviewResponse, DatasetUpdate
+from schemas.dataset import DatasetBase, Dataset, DatasetCreate, DatasetPreviewResponse, DatasetUpdate, DatasetParameters, DatasetPreprocess
 from schemas.column import ColumnBase, Column, ColumnCreate, ColumnUpdate, ColumnDelete
 from schemas.column_type import ColumnTypeBase, ColumnType, ColumnTypeCreate, ColumnTypeUpdate, ColumnTypeDelete
 from schemas.query import QueryBase, QueryCreate, QueryUpdate, QueryDelete
 from schemas.value_type import ValueTypeBase, ValueType, ValueTypeCreate, ValueTypeUpdate, ValueTypeDelete
 from schemas.permission import PermissionBase, Permission, PermissionCreate, PermissionUpdate, PermissionDelete
+from schemas.entity import EntityCreate, Entity
 # este archivo falta crear
 
 from functions.connetions import register_connection, remove_connection, notify_disconnect, send_progress_to_websocket
 from functions.dataset_manage import analyze_dataset
 
+from functions.preprocessing_function import preprocess_dataset
 
-from crud import file_crud, author_crud, role_crud ,project_crud, dataset_crud, column_crud, column_type_crud, value_type_crud, permission_crud
+
+from crud import file_crud, author_crud, role_crud ,project_crud, dataset_crud, column_crud, column_type_crud, value_type_crud, permission_crud, entity_crud
 # from crud.patada_crud import procesar_patada 
-from models import file_model, author_model, column_model, column_type_model, query_model, value_type_model, db_model, dataset_model
+from models import file_model, author_model, column_model, column_type_model, query_model, value_type_model, db_model, dataset_model, entity_model
 from functions.init_function import init_roles_and_permissions
 app = FastAPI()
 Base.metadata.create_all(bind=engine)
@@ -106,6 +111,46 @@ def get_main():
     return {"Hello": "World"}
 
 
+async def validate_token_header(
+    Authorization: str = Header(),
+
+) -> AuthorToken:
+    try:
+        authorization_token = Authorization.split(" ")[1]
+        print(authorization_token)
+        if not authorization_token:
+            raise HTTPException(status_code=400, detail="Token is missing")
+        current_user = auth_token.decode_access_token(authorization_token)
+        # if current_user == None:  # el token no es valido
+        print(current_user)
+        if not current_user:  # el token no es valido
+            raise HTTPException(status_code=404, detail="Session not found")
+        user_token = AuthorToken(**current_user)
+        print(user_token)
+        return user_token
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=400, detail="Token is missing")
+
+
+# **************************** VALIDATE TOKEN **************************
+@app.get("/api/validate_token", response_model=AuthorToken)
+async def validate_token_endpoint(
+    current_user: AuthorToken = Depends(validate_token_header),
+):
+    return current_user
+
+# @app.post("/api/agregar_patada")
+# async def agregar_patada(
+#     body = Form(...),
+    
+#     # current_user: AuthorToken = Depends(validate_token_header),
+# ):
+#     return procesar_patada(value=body)
+
+
+# endpint proyectos con token
+
 
 
 
@@ -141,35 +186,41 @@ async def websocket_endpoint(websocket: WebSocket, operation_id: str):
 
 
 # permissioons endpoint
-
-@app.get("/api/permissions", response_model=list[Permission])
+# Get all Permissions
+@app.get("/api/administration/permissions", response_model=list[Permission])
 async def get_permissions_endpoint(
     db: Session = Depends(get_db),
-    # current_user: AuthorToken = Depends(validate_token_header),
+    current_user: AuthorToken = Depends(validate_token_header),
 ):
     return permission_crud.get_permissions(db=db)
-@app.get("/api/permissions/{permission_id}", response_model=Permission)
+#  GET PERMISSION BY ID 
+@app.get("/api/administration/permissions/{permission_id}", response_model=Permission)
 async def get_permission_endpoint(
     permission_id: str,
     db: Session = Depends(get_db),
-    # current_user: AuthorToken = Depends(validate_token_header),
+    current_user: AuthorToken = Depends(validate_token_header),
 ):
     return permission_crud.get_permission(db=db, permission_id=permission_id)
-@app.post("/api/permissions", response_model=Permission)
+# CREATE PERMISSSION
+@app.post("/api/administration/permissions", response_model=Permission)
 async def create_permission_endpoint(
     permission: PermissionCreate,
     db: Session = Depends(get_db),
-    # current_user: AuthorToken = Depends(validate_token_header),
+    current_user: AuthorToken = Depends(validate_token_header),
 ):
     return permission_crud.create_permission(db=db, permission=permission)
-@app.put("/api/permissions", response_model=Permission)
+# UPDATE PERMISSION
+
+@app.put("/api/administration/permissions", response_model=Permission)
 async def update_permission_endpoint(
     permission: PermissionUpdate,
     db: Session = Depends(get_db),
     # current_user: AuthorToken = Depends(validate_token_header),
 ):
     return permission_crud.update_permission(db=db, permission=permission)
-@app.delete("/api/permissions", response_model=Permission)
+
+# DELETE PERMISSION
+@app.delete("/api/administration/permissions", response_model=Permission)
 async def delete_permission_endpoint(
     permission: PermissionDelete,
     db: Session = Depends(get_db),
@@ -179,44 +230,7 @@ async def delete_permission_endpoint(
 
 # Session endopints 
 
-async def validate_token_header(
-    Authorization: str = Header(),
 
-) -> AuthorToken:
-    try:
-        authorization_token = Authorization.split(" ")[1]
-        print(authorization_token)
-        if not authorization_token:
-            raise HTTPException(status_code=400, detail="Token is missing")
-        current_user = auth_token.decode_access_token(authorization_token)
-        # if current_user == None:  # el token no es valido
-        print(current_user)
-        if not current_user:  # el token no es valido
-            raise HTTPException(status_code=404, detail="Session not found")
-        user_token = AuthorToken(**current_user)
-        print(user_token)
-        return user_token
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=400, detail="Token is missing")
-
-# **************************** VALIDATE TOKEN **************************
-@app.get("/api/validate_token", response_model=AuthorToken)
-async def validate_token_endpoint(
-    current_user: AuthorToken = Depends(validate_token_header),
-):
-    return current_user
-
-# @app.post("/api/agregar_patada")
-# async def agregar_patada(
-#     body = Form(...),
-    
-#     # current_user: AuthorToken = Depends(validate_token_header),
-# ):
-#     return procesar_patada(value=body)
-
-
-# endpint proyectos con token
 
 #TODO
 @app.get("/api/user/projects", response_model= AuthorPublic)
@@ -396,8 +410,44 @@ async def delete_role(
     db: Session = Depends(get_db),
 ):
     return role_crud.delete_role(db=db, role_id=role.id)
-# Project endpoints
 
+
+
+#entities endpoints
+@app.get("/api/administration/entity",response_model=list[Entity])
+async def get_all_entities(
+    # current_user: AuthorToken = Depends(validate_token_header),
+    db: Session = Depends(get_db),
+
+):
+    return entity_crud.get_entities(db=db)
+
+@app.get("/api/administration/entity/{entity_id}", response_model=Entity)
+async def get_entities_by_uuid(
+    entity_id: str,
+    # current_user: AuthorToken = Depends(validate_token_header),
+    db: Session = Depends(get_db),
+
+):
+    return entity_crud.get_entitie_by_id(db=db, entity_id=entity_id)
+
+
+@app.post("/api/administration/entity", response_model=Entity)
+async def create_entity(
+    entity: EntityCreate,
+    db: Session = Depends(get_db),
+
+):
+    return entity_crud.create_entity(db=db, entity=entity)
+
+@app.delete("/api/administration/entity/{entity_id}", response_model=Entity)
+async def delete_entity(
+    entity_id: str,
+    db: Session = Depends(get_db),
+
+):
+    return entity_crud.delete_entity(db=db, entity_id=entity_id)
+# Project endpoints
 # CREATE PROJECT
 
 @app.post("/api/projects" , response_model=Project)
@@ -970,7 +1020,7 @@ async def get_all_columns_endpoint(
     return column_crud.get_all_columns(db=db)
 
 
-#DATASETS endpoints
+# DATASETS endpoints
 
 # CREATE DATASET
 
@@ -1041,3 +1091,40 @@ async def update_dataset_endpoint(
     db: Session = Depends(get_db),
 ):
     return dataset_crud.update_dataset_status(db=db,dataset=dataset)
+
+
+# Preprocess dataset
+
+# nota: funcion en background
+#TODO
+
+@app.post("/api/datasets/preprocess", response_model=DatasetPreprocess )
+async def preprocess_dataset_endpoint(
+    parameters: DatasetPreprocess,
+    background_tasks: BackgroundTasks,
+    current_user: AuthorToken = Depends(validate_token_header),
+    db: Session = Depends(get_db)
+):
+    operation_id = str(uuid.uuid4())
+
+    background_tasks.add_task(
+        preprocess_dataset,
+        parameters.datasetID,
+        parameters.parameters,
+        operation_id
+
+    )
+    print(f"Operación de carga iniciada con ID:", operation_id,"en el Dataset", parameters.datasetID)
+    return JSONResponse(
+        content={
+            "message": "Operación de carga iniciada en segundo plano.",
+            "operation_id": operation_id,
+            "user_req":parameters.userID ,
+            "project_id": parameters.projectID,
+            "dataset_id": parameters.datasetID,# Puede ser útil confirmarlo
+        },
+        status_code=202 # Accepted
+    )
+
+
+
