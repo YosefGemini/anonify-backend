@@ -35,12 +35,14 @@ from functions import auth_token, auth
 
 
 
+
+
 # Schemas import
 from schemas.file import FileBase, FileDB, FileCreate
 from schemas.author import AuthorBase, Author, AuthorCreate, AuthorUpdate, AuthorDelete, AuthorPublic, AuthorToken, AuthCredentials, AuthorPublicInformation
 from schemas.role import RoleBase, Role, RoleCreate, RoleUpdate, RoleDelete
 from schemas.project import ProjectBase, Project, ProjectCreate, ProjectUpdate, ProjectDelete, ProjectInformation
-from schemas.dataset import DatasetBase, Dataset, DatasetCreate, DatasetPreviewResponse, DatasetUpdate
+from schemas.dataset import DatasetBase, Dataset, DatasetCreate, DatasetPreviewResponse, DatasetUpdate, DatasetParameters, DatasetPreprocess
 from schemas.column import ColumnBase, Column, ColumnCreate, ColumnUpdate, ColumnDelete
 from schemas.column_type import ColumnTypeBase, ColumnType, ColumnTypeCreate, ColumnTypeUpdate, ColumnTypeDelete
 from schemas.query import QueryBase, QueryCreate, QueryUpdate, QueryDelete
@@ -51,6 +53,8 @@ from schemas.entity import EntityCreate, Entity
 
 from functions.connetions import register_connection, remove_connection, notify_disconnect, send_progress_to_websocket
 from functions.dataset_manage import analyze_dataset
+
+from functions.preprocessing_function import preprocess_dataset
 
 
 from crud import file_crud, author_crud, role_crud ,project_crud, dataset_crud, column_crud, column_type_crud, value_type_crud, permission_crud, entity_crud
@@ -1016,7 +1020,7 @@ async def get_all_columns_endpoint(
     return column_crud.get_all_columns(db=db)
 
 
-#DATASETS endpoints
+# DATASETS endpoints
 
 # CREATE DATASET
 
@@ -1087,3 +1091,40 @@ async def update_dataset_endpoint(
     db: Session = Depends(get_db),
 ):
     return dataset_crud.update_dataset_status(db=db,dataset=dataset)
+
+
+# Preprocess dataset
+
+# nota: funcion en background
+#TODO
+
+@app.post("/api/datasets/preprocess", response_model=DatasetPreprocess )
+async def preprocess_dataset_endpoint(
+    parameters: DatasetPreprocess,
+    background_tasks: BackgroundTasks,
+    current_user: AuthorToken = Depends(validate_token_header),
+    db: Session = Depends(get_db)
+):
+    operation_id = str(uuid.uuid4())
+
+    background_tasks.add_task(
+        preprocess_dataset,
+        parameters.datasetID,
+        parameters.parameters,
+        operation_id
+
+    )
+    print(f"Operación de carga iniciada con ID:", operation_id,"en el Dataset", parameters.datasetID)
+    return JSONResponse(
+        content={
+            "message": "Operación de carga iniciada en segundo plano.",
+            "operation_id": operation_id,
+            "user_req":parameters.userID ,
+            "project_id": parameters.projectID,
+            "dataset_id": parameters.datasetID,# Puede ser útil confirmarlo
+        },
+        status_code=202 # Accepted
+    )
+
+
+

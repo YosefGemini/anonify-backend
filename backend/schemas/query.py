@@ -9,8 +9,6 @@ class QueryBase(BaseModel):
     answer: str
     query_status: str
 
-    query: str
-
 class QueryCreate(QueryBase):
     db_id: UUID
     columns: list[Column]

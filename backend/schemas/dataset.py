@@ -50,7 +50,21 @@ class DatasetUpdate(BaseModel):
     rows: int
 
 
-                 
+
+class DatasetParameters(BaseModel):
+    need_preprocess: bool
+    need_imputation: bool
+    imputation_method: str
+    columns: int
+    len: int
+
+
+
+class DatasetPreprocess(BaseModel):
+    userID: str
+    projectID: str
+    datasetID: str
+    parameters: DatasetParameters
     
 
 
