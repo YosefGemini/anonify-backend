@@ -95,6 +95,7 @@ async def startup_event():
         try:
             await permission_crud.create_default_permissions(db=db)
             await role_crud.create_default_roles(db=db)
+            await author_crud.create_default_user(db=db)
         except Exception as e:
             print(f"Error en startup_event: {e}")
             raise
@@ -126,7 +127,7 @@ async def validate_token_header(
         if not current_user:  # el token no es valido
             raise HTTPException(status_code=404, detail="Session not found")
         user_token = AuthorToken(**current_user)
-        print(user_token)
+        print("TokenInfo:",user_token)
         return user_token
     except Exception as e:
         print(e)
@@ -416,16 +417,15 @@ async def delete_role(
 #entities endpoints
 @app.get("/api/administration/entity",response_model=list[Entity])
 async def get_all_entities(
-    # current_user: AuthorToken = Depends(validate_token_header),
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
-
 ):
     return entity_crud.get_entities(db=db)
 
 @app.get("/api/administration/entity/{entity_id}", response_model=Entity)
 async def get_entities_by_uuid(
     entity_id: str,
-    # current_user: AuthorToken = Depends(validate_token_header),
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 
 ):
@@ -435,6 +435,7 @@ async def get_entities_by_uuid(
 @app.post("/api/administration/entity", response_model=Entity)
 async def create_entity(
     entity: EntityCreate,
+    current_user: AuthorToken = Depends(validate_token_header),
     db: Session = Depends(get_db),
 
 ):
@@ -1095,7 +1096,7 @@ async def update_dataset_endpoint(
 
 # Preprocess dataset
 
-# nota: funcion en background
+# nota: funcion en background.
 #TODO
 
 @app.post("/api/datasets/preprocess", response_model=DatasetPreprocess )
@@ -1112,6 +1113,7 @@ async def preprocess_dataset_endpoint(
         parameters.datasetID,
         parameters.parameters,
         operation_id
+
 
     )
     print(f"Operación de carga iniciada con ID:", operation_id,"en el Dataset", parameters.datasetID)
