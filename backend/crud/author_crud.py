@@ -29,7 +29,7 @@ async def create_default_user(db):
         }
         def_name= str(default_admin["name"])
 
-        print(def_name)
+        # print(def_name)
 
         author_in_db = db.query(author_model.Author).filter(author_model.Author.name == def_name).first()
 
@@ -51,7 +51,7 @@ async def create_default_user(db):
             db.refresh(author_to_add)
             print("Default User created")
         else:
-            print(f"Default user {default_admin['name']} was created")
+            print(f"Default user {default_admin['name']} already exists")
 
     except Exception as e:
         print(f"Error creating default User: {e}")

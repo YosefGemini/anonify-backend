@@ -47,21 +47,24 @@ class DatasetPreviewResponse(BaseModel):
 class DatasetUpdate(BaseModel):
     id: UUID
     status: str
+    entity: Optional[UUID] = None
     rows: int
 
 
 
 class DatasetParameters(BaseModel):
+    dataset_status: str
     need_preprocess: bool
     need_imputation: bool
-    imputation_method: str
-    columns: int
-    len: int
+    cleaning_method: str
+    columns: list[Column]
+    rows: int
+
 
 
 
 class DatasetPreprocess(BaseModel):
-    userID: str
+    # userID: str
     projectID: str
     datasetID: str
     parameters: DatasetParameters

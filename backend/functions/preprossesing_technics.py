@@ -2,12 +2,13 @@
 import pandas as pd
 import numpy as np
 from sklearn.impute import SimpleImputer, KNNImputer
+from pathlib import Path # Importa Path
 
 ## Convertir explícitamente None a NaN en todo el DataFrame
 async def convert_null_data(df: pd.DataFrame ):
   
-    df.replace({None: np.nan}, inplace=True)
-    return df
+    val = df.replace({None: np.nan}, inplace=True)
+    return val
 
 # Eliminar valores duplicados
 async def show_duplicates(df: pd.DataFrame):
@@ -22,7 +23,7 @@ async def remove_duplicates(df: pd.DataFrame):
     final_count = len(df)
     print(f"/n✅ Valores Duplicados Eliminados: {initial_count - final_count} filas eliminadas.")
 
-    return df
+    return dataframe_rem
 
     # return dataframe_rem
 
@@ -79,6 +80,18 @@ async def moda_imputation(df: pd.DataFrame, columns: list[str]):
     df[columns] = imputer_categorico.fit_transform(df[columns])
 
     return df
+
+async def saveDataFrame(df: pd.DataFrame, url: str, encoding: str):
+    # df.to_csv()
+    try:
+        file_path = Path(url)
+
+        df.to_csv(file_path, index=False, encoding=encoding)
+        return True
+    except Exception as e:
+        print("Error al guardar CSV", e)
+        return False
+
 
 
 

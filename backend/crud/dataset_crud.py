@@ -49,6 +49,7 @@ async def update_dataset_status(db: Session, dataset: DatasetUpdate):
     
     dataset_in_db.status = dataset.status
     dataset_in_db.rows = dataset.rows
+    dataset_in_db.entity = dataset.entity if dataset.entity else None
     db.commit()
     db.refresh(dataset_in_db)
 
