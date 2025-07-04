@@ -25,7 +25,14 @@ DEFAULT_ROLES: list[RoleCreate] = [
             "create_project",
             "view_project",
             "edit_project",
-            "delete_project"
+            "delete_project",
+            "create_entity",
+            "view_entity",
+            "edit_entity",
+            "delete_entity",
+            "view_permission",
+            "edit_permission"
+                    
         ]
     },
     {
@@ -37,7 +44,10 @@ DEFAULT_ROLES: list[RoleCreate] = [
             "view_project",
         # "edit_project"
             "view_dataset",
-            "preprocess_dataset"
+            "preprocess_dataset",
+            "view_entity",
+            
+            
         ]
     },
     {
@@ -49,7 +59,9 @@ DEFAULT_ROLES: list[RoleCreate] = [
             "view_project",
         # "edit_project"
             "view_dataset",
-            "anonymize_dataset"
+            "anonymize_dataset",
+            "view_entity",
+            "create_entity",
         ]
     },
     {
@@ -74,6 +86,10 @@ DEFAULT_ROLES: list[RoleCreate] = [
             "edit_data",
             "download_data",
             "upload_data",
+            "view_entity",
+            "create_entity",
+            "edit_entity",
+            "delete_entity"
         ]
     },
     {
@@ -82,7 +98,8 @@ DEFAULT_ROLES: list[RoleCreate] = [
         "permissions": [
             "view_project",
             "view_dataset",
-            "view_data"
+            "view_data",
+            "view_entity",
         ],
 
     }

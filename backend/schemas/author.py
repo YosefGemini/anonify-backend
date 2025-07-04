@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from uuid import UUID
 from schemas.project import Project
-from schemas.role import RolePublic
+from schemas.role import RolePublic, Role, RoleInToken
 
 class AuthorBase(BaseModel):
     name: str
@@ -24,10 +24,9 @@ class AuthorToken(BaseModel):
     name: str
     cell_phone: str = None
     mail: str
-    # profile_pic: str = None
+    role: RoleInToken
     username: str
-    # role: RolePublic
-    #password: str
+
 
 class AuthCredentials(BaseModel):
     username: str

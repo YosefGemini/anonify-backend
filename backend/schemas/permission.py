@@ -20,3 +20,13 @@ class PermissionUpdate(PermissionBase):
 
 class PermissionDelete(BaseModel):
     id: str
+
+# Esquema para un permiso individual dentro del token
+class PermissionInToken(BaseModel):
+    name: str
+    description: str # O solo el nombre si no necesitas la descripción en el token
+
+    # Configuración para permitir que Pydantic maneje objetos ORM
+    class Config:
+        from_attributes = True # Anteriormente orm_mode = True
+
