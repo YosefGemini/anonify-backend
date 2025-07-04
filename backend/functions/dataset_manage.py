@@ -108,6 +108,8 @@ def detect_delimiter(file_path: str, encoding: str, sample_size: int = 1024 * 5)
 
 
 
+
+
 async def read_csv_for_all_codifications(
         url: str,
         skiprows: int=0,

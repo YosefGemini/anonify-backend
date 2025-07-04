@@ -3,8 +3,12 @@ import jwt
 from datetime import datetime, timedelta
 
 from conf import settings
-#from exceptions import AuthTokenMissing, AuthTokenExpired, AuthTokenCorrupted
 
+from schemas.author import AuthorToken
+
+from fastapi import Header, HTTPException,status
+#from exceptions import AuthTokenMissing, AuthTokenExpired, AuthTokenCorrupted
+from functions import auth_token
 
 
 SECRET_KEY = settings.TOKEN_SECRET_KEY
@@ -37,5 +41,25 @@ def decode_access_token(authorization: str = None):
         print(e)
         return None
 
-    
+async def validate_token_header(
+    Authorization: str = Header(),
+
+) -> AuthorToken:
+    try:
+        authorization_token = Authorization.split(" ")[1]
+        # print(authorization_token)
+        if not authorization_token:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+        current_user = auth_token.decode_access_token(authorization_token)
+        # if current_user == None:  # el token no es valido
+        # print(current_user)
+        if not current_user:  # el token no es valido
+            raise HTTPException(status_code=404, detail="Session not found")
+        user_token = AuthorToken(**current_user)
+        # print("TokenInfo:",user_token)
+        return user_token
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=400, detail="Token is missing")
+
     

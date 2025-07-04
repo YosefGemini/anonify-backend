@@ -45,7 +45,48 @@ DEFAULT_PERMISSIONS: list[PermissionCreate] = [
     {
         "name": "delete_role",
         "description": "Permite eliminar roles"
+    },
+
+    # ENTIDADES
+
+    {
+        "name": "create_entity",
+        "description": "Permite crear roles"
     }
+    ,
+    {
+        "name": "view_entity",
+        "description": "Permite ver roles"
+    }
+    ,
+    {
+        "name": "edit_entity",
+        "description": "Permite editar roles"
+    }
+    ,
+    {
+        "name": "delete_entity",
+        "description": "Permite eliminar roles"
+    }
+    # {
+    #     "name": "create_role",
+    #     "description": "Permite crear roles"
+    # }
+    ,
+    {
+        "name": "view_permission",
+        "description": "Permite ver los Permisos de cada usuario"
+    }
+    ,
+    {
+        "name": "edit_permission",
+        "description": "Permite editar la descripción de los permisos"
+    }
+    # ,
+    # {
+    #     "name": "delete_role",
+    #     "description": "Permite eliminar roles"
+    # }
     ,
     {
         "name": "create_project",

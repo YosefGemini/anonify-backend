@@ -9,7 +9,54 @@ from functions import auth_token
 from functions.auth import get_password_hash , verify_password
 
 from uuid import UUID
+from models.role_model import Role
 
+
+
+
+async def create_default_user(db):
+
+    try:
+        default_admin: AuthorCreate = {
+        "name": "DefaultAdmin",
+        "nationality": "No Especificado",
+        "username": "admin",
+        "password": "admin",
+        "mail": "admin@mail.com",
+        "cell_phone": "123456789",
+        "role_id": db.query(Role).filter_by(name="admin").first().id,
+
+        }
+        def_name= str(default_admin["name"])
+
+        # print(def_name)
+
+        author_in_db = db.query(author_model.Author).filter(author_model.Author.name == def_name).first()
+
+
+        if not author_in_db:
+            passwordhash = get_password_hash(str(default_admin["password"]))
+            author_to_add = author_model.Author(
+
+                name=default_admin["name"],
+                username=default_admin["username"],
+                password=passwordhash,
+                mail=default_admin["mail"],
+                cell_phone=default_admin["cell_phone"] if default_admin["cell_phone"] else None,
+                nationality=default_admin["nationality"],
+                role_id=default_admin["role_id"]
+            )
+            db.add(author_to_add)
+            db.commit()
+            db.refresh(author_to_add)
+            print("Default User created")
+        else:
+            print(f"Default user {default_admin['name']} already exists")
+
+    except Exception as e:
+        print(f"Error creating default User: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="Error creating default user")
 
 def create_author(db: Session, author: AuthorCreate):
 
