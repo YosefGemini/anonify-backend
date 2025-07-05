@@ -28,6 +28,11 @@ class RolePublic(BaseModel):
     class Config:
         from_attibutes = True
     
+class RoleBasic(BaseModel):
+    id: UUID
+    name: str
+    class Config:
+        from_attibutes = True
 
 class RoleUpdate(RoleBase):
     id: str

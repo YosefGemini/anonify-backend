@@ -1,6 +1,6 @@
 
 
-from functions.preprossesing_technics import convert_null_data,show_duplicates, remove_duplicates, identify_number_columns,identify_categorical_columns, aritmetic_mean_imputation, knn_imputation, moda_imputation, saveDataFrame
+from functions.preprossesing_technics import convert_null_data,show_duplicates, remove_duplicates, identify_number_columns,identify_categorical_columns, aritmetic_mean_imputation, knn_imputation, moda_imputation, saveDataFrame,remove_empty_columns
 from schemas.dataset import DatasetParameters, DatasetUpdate
 from schemas.file import FileCreate
 import os
@@ -70,6 +70,12 @@ async def preprocess_dataset(db: Session ,datasetID: str,projectID: str, paramet
         await asyncio.sleep(1)
 
 
+
+        # Limpiar Columnas Vacias
+        await send_progress_to_websocket(operationID,25,"Limpiando...", "Limpiando Columnas con datos Vacios")
+        df = await remove_empty_columns(df)
+
+        await asyncio.sleep(1)
 
         # Identificar Columnas numericas y categoricas
 

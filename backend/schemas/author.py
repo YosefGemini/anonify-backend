@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from uuid import UUID
 from schemas.project import Project
-from schemas.role import RolePublic, Role, RoleInToken
+from schemas.role import RolePublic, Role, RoleInToken, RoleBasic
 
 class AuthorBase(BaseModel):
     name: str
@@ -41,16 +41,22 @@ class Author(AuthorBase):
         # orm_mode = True
         from_attributes = True
 
-
+class AuthorBasicInformation(BaseModel):
+    id: UUID
+    name: str
+    username: str
+    role: RoleBasic
+    class Config:
+        from_attributes = True
 
 class AuthorPublic(BaseModel):
     id: UUID
     name: str
     projects: list[Project]
-
+    shared: list[Project]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
     
 
 
@@ -79,5 +85,10 @@ class AuthorUpdate(AuthorBase):
 
 class AuthorDelete(BaseModel):
     id: str
+
+class ShareInformation(BaseModel):
+
+    projectID: UUID
+    authors: list[UUID] 
 
 

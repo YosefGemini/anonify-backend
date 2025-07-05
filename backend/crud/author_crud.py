@@ -218,3 +218,5 @@ def delete_author(db: Session, author_id: UUID):
     db.commit()
 
     return db_author
+
+

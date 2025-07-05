@@ -40,7 +40,7 @@ from functions.dependencies import HasPermission
 
 # Schemas import
 from schemas.file import FileBase, FileDB, FileCreate
-from schemas.author import AuthorBase, Author, AuthorCreate, AuthorUpdate, AuthorDelete, AuthorPublic, AuthorToken, AuthCredentials, AuthorPublicInformation
+from schemas.author import AuthorBase, Author, AuthorCreate, AuthorUpdate, AuthorDelete, AuthorPublic, AuthorToken, AuthCredentials, AuthorPublicInformation, ShareInformation, AuthorBasicInformation
 from schemas.role import RoleBase, Role, RoleCreate, RoleUpdate, RoleDelete, RoleInToken
 from schemas.project import ProjectBase, Project, ProjectCreate, ProjectUpdate, ProjectDelete, ProjectInformation
 from schemas.dataset import DatasetBase, Dataset, DatasetCreate, DatasetPreviewResponse, DatasetUpdate, DatasetParameters, DatasetPreprocess
@@ -320,6 +320,15 @@ async def get_author_public_information_endpoint(
     """
     return author_crud.get_author(db=db, author_id=author_id)
 
+# get all autors public
+@app.get("/api/public/share/authors", response_model=list[AuthorBasicInformation])
+async def get_author_public_information_endpoint(
+    current_user: AuthorToken = Depends(validate_token_header),
+    db: Session = Depends(get_db),
+):
+    # author_id= str(current_user.id)
+    return author_crud.get_all_authors(db=db)
+
 @app.get("/api/public/author", response_model=AuthorPublicInformation)
 async def get_author_public_information_endpoint(
     current_user: AuthorToken = Depends(validate_token_header),
@@ -365,7 +374,8 @@ async def delete_author(
 ):
     return author_crud.delete_author(db=db, author_id=author.id)
 #TODO
-# este hay que revisar
+
+# Este endpoint es para el acceso a los datos basicos del usuario y la lista de proyectos asociados
 @app.get("/api/user/projects", response_model= AuthorPublic)
 async def get_project_endpoint(
     db: Session = Depends(get_db),
@@ -374,7 +384,16 @@ async def get_project_endpoint(
 ):
     return author_crud.get_author(db=db, author_id=current_user.id)
 
+#TODO
+# hay que verificar los permisos de este endpoint
+@app.post("/api/user/projects/share", response_model=ProjectInformation)
+async def share_project_endpoint(
+    shareInformation: ShareInformation,
+    current_user: AuthorToken = Depends(HasPermission("edit_project")),
+    db: Session = Depends(get_db),
 
+):
+    return project_crud.share_project(db=db,projectID=shareInformation.projectID, authors_id=shareInformation.authors)
 
 # ROLES endpoints
 
