@@ -40,7 +40,7 @@ from functions.dependencies import HasPermission
 
 # Schemas import
 from schemas.file import FileBase, FileDB, FileCreate
-from schemas.author import AuthorBase, Author, AuthorCreate, AuthorUpdate, AuthorDelete, AuthorPublic, AuthorToken, AuthCredentials, AuthorPublicInformation
+from schemas.author import AuthorBase, Author, AuthorCreate, AuthorUpdate, AuthorDelete, AuthorPublic, AuthorToken, AuthCredentials, AuthorPublicInformation, ShareInformation, AuthorBasicInformation
 from schemas.role import RoleBase, Role, RoleCreate, RoleUpdate, RoleDelete, RoleInToken
 from schemas.project import ProjectBase, Project, ProjectCreate, ProjectUpdate, ProjectDelete, ProjectInformation
 from schemas.dataset import DatasetBase, Dataset, DatasetCreate, DatasetPreviewResponse, DatasetUpdate, DatasetParameters, DatasetPreprocess
@@ -79,10 +79,6 @@ app.add_middleware(
 # Lista para rastrear conexiones de WebSockets
 # active_connections: List[WebSocket] = []
 
-
-# @app.lifespan("startup")
-
-
 # evento que se realiza al iniciar la aplicacion
 
 @app.on_event("startup")
@@ -120,19 +116,11 @@ def get_main():
 async def validate_token_endpoint(
     current_user: AuthorToken = Depends(validate_token_header),
 ):
+    print(current_user)
     return current_user
 
-# @app.post("/api/agregar_patada")
-# async def agregar_patada(
-#     body = Form(...),
-    
-#     # current_user: AuthorToken = Depends(validate_token_header),
-# ):
-#     return procesar_patada(value=body)
 
-
-# endpint proyectos con token
-
+# Endpoint Login
 
 @app.post("/api/login")
 async def login_endpoint(
@@ -159,33 +147,18 @@ async def login_endpoint(
             "id": str(user_info.id),
             "name": user_info.name,
             "username": user_info.username,
-            "mail": user_info.mail,
+            # "mail": user_info.mail,
             "role": role_data
             # "profile_pic": user_info.profile_pic if user_info.profile_pic else None
             #"password": user_info.password,
         }
     )
+
+    print(current_token)
     return {
         "msg": "Login successful",
         "token": current_token,
     }
-
-# @app.post("/api/logout")
-# async def logout_endpoint(
-#     response: Response,
-#     current_user: AuthorToken = Depends(validate_token_header),
-#     db: Session = Depends(get_db),
-# ):
-#     """
-#     Endpoint para cerrar sesión.
-#     """
-#     # Aquí podrías invalidar el token o realizar otras acciones de cierre de sesión
-
-
-
-#     # Por ejemplo, eliminar el token de una lista de tokens válidos si estás usando un sistema de tokens persistentes
-#     print(f"User {current_user.username} logged out.")
-#     return {"msg": "Logout successful"}
 
 # Change password
 
@@ -320,6 +293,15 @@ async def get_author_public_information_endpoint(
     """
     return author_crud.get_author(db=db, author_id=author_id)
 
+# get all autors public
+@app.get("/api/public/share/authors", response_model=list[AuthorBasicInformation])
+async def get_author_public_information_endpoint(
+    current_user: AuthorToken = Depends(validate_token_header),
+    db: Session = Depends(get_db),
+):
+    # author_id= str(current_user.id)
+    return author_crud.get_all_authors(db=db)
+
 @app.get("/api/public/author", response_model=AuthorPublicInformation)
 async def get_author_public_information_endpoint(
     current_user: AuthorToken = Depends(validate_token_header),
@@ -365,7 +347,10 @@ async def delete_author(
 ):
     return author_crud.delete_author(db=db, author_id=author.id)
 #TODO
-# este hay que revisar
+
+# endpint proyectos con token
+
+# Este endpoint es para el acceso a los datos basicos del usuario y la lista de proyectos asociados
 @app.get("/api/user/projects", response_model= AuthorPublic)
 async def get_project_endpoint(
     db: Session = Depends(get_db),
@@ -374,7 +359,16 @@ async def get_project_endpoint(
 ):
     return author_crud.get_author(db=db, author_id=current_user.id)
 
+#TODO
+# hay que verificar los permisos de este endpoint
+@app.post("/api/user/projects/share", response_model=ProjectInformation)
+async def share_project_endpoint(
+    shareInformation: ShareInformation,
+    current_user: AuthorToken = Depends(HasPermission("edit_project")),
+    db: Session = Depends(get_db),
 
+):
+    return project_crud.share_project(db=db,projectID=shareInformation.projectID, authors_id=shareInformation.authors)
 
 # ROLES endpoints
 

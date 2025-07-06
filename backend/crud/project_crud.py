@@ -87,29 +87,83 @@ def delete_project(db: Session, project_id: str):
     db.commit()
     return 
 
-def share_project(db: Session, project_id: str, users: list[str]):
+# def share_project(db: Session, project_id: str, users: list[str]):
 
-    project_in_db = db.query(project_model.Project).filter(project_model.Project.id == project_id).first()
+#     project_in_db = db.query(project_model.Project).filter(project_model.Project.id == project_id).first()
 
-    if not project_in_db:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project with id {project_id} not found")
+#     if not project_in_db:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project with id {project_id} not found")
     
-    users_to_share = []
+#     users_to_share = []
     
-    for user_id in users:
-        user_in_db = db.query(author_model.Author).filter(author_model.Author.id == user_id)
-        if not user_in_db:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user with id: {user_id}not found in DB")
+#     for user_id in users:
+#         user_in_db = db.query(author_model.Author).filter(author_model.Author.id == user_id)
+#         if not user_in_db:
+#             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user with id: {user_id}not found in DB")
         
-        users_to_share.append(user_in_db)
+#         users_to_share.append(user_in_db)
 
 
-    print(f"Usuarios a compartir: ", users_to_share)
-    db_project = project_model.Project(
-        shared = users_to_share
-    )
+#     print(f"Usuarios a compartir: ", users_to_share)
+#     db_project = project_model.Project(
+#         shared = users_to_share
+#     )
 
-    db.add(db_project)
-    db.commit()
-    db.refresh(db_project)
+#     db.add(db_project)
+#     db.commit()
+#     db.refresh(db_project)
 
+def share_project(db: Session, projectID: str, authors_id: list[str]):
+  
+    try:
+
+        # 1. Fetch the project
+        project_to_share = db.query(project_model.Project).filter(project_model.Project.id == projectID).first()
+        if not project_to_share:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project with ID {projectID} not found")
+        # Validacion de existencia del usuario en la base de datos
+        authors_to_share = []
+        for author_id in authors_id:
+            author_in_db = db.query(author_model.Author).filter(author_model.Author.id == author_id).first()
+
+            if not author_in_db:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"user with id {author_id} not found")
+            
+
+            authors_to_share.append(author_in_db)
+        # validacion de que no tiene agregado el projecto previamente sinop agregar
+
+        # 3. Add the project to each author's shared_projects relationship
+        for author in authors_to_share:
+            # total_projects = author.projects + author.shaded
+            # exists = False
+            # verificar si el proyecto ya es parte del usuario
+            if project_to_share in author.projects: # Assuming 'projects' is the relationship for owned projects
+                print(f"User {author.name} (ID: {author.id}) is already the owner of project {project_to_share.title}. Skipping sharing.")
+                continue
+
+            # Check if the project is already shared with this user
+            if project_to_share in author.shared:
+                print(f"Project {project_to_share.title} (ID: {projectID}) is already shared with user {author.name} (ID: {author.id}). Skipping.")
+                continue
+
+            # If not owned and not already shared, add it to the shared_projects collection
+            author.shared.append(project_to_share)
+            print(f"Project {project_to_share.title} shared with {author.name}.")
+
+        # 4. Commit the changes to the database
+        db.commit()
+        db.refresh(project_to_share)
+        print(f"Project {project_to_share.title} (ID: {projectID}) successfully shared with {len(authors_to_share)} users.")
+            
+        return project_to_share
+                    
+
+            # agregando proyectos propios
+            # author.projects
+
+
+
+    except Exception as e:
+
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"SERVER ERROR:{e}")

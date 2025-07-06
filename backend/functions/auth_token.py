@@ -46,20 +46,24 @@ async def validate_token_header(
 
 ) -> AuthorToken:
     try:
-        authorization_token = Authorization.split(" ")[1]
-        # print(authorization_token)
+        
+        authorization_token = Authorization.split(" ")[1] 
+        # print("FASE 1",authorization_token)
+
         if not authorization_token:
+            # print("CAMINO 1")
+
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
         current_user = auth_token.decode_access_token(authorization_token)
         # if current_user == None:  # el token no es valido
-        # print(current_user)
+        # print("FASE 2",current_user)
         if not current_user:  # el token no es valido
-            raise HTTPException(status_code=404, detail="Session not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
         user_token = AuthorToken(**current_user)
         # print("TokenInfo:",user_token)
         return user_token
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=400, detail="Token is missing")
+        print("EXCEPCION:", e)
+        raise HTTPException(status_code=400, detail=f"Token is missing: {e}")
 
     

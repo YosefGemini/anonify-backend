@@ -24,6 +24,6 @@ class Project(Base):
     
     datasets= relationship('Dataset', backref=backref('project', uselist=True))
 
-    authors = relationship('Author', secondary='shared_projects', back_populates='projects')
+    authors = relationship('Author', secondary='shared_projects', back_populates='shared')
 
     

@@ -93,7 +93,31 @@ async def saveDataFrame(df: pd.DataFrame, url: str, encoding: str):
         return False
 
 
+async def remove_empty_columns(df: pd.DataFrame) -> pd.DataFrame:
 
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError("La entrada debe ser un DataFrame de Pandas.")
+
+    # Identificar columnas donde TODOS los valores son NaN/null
+    # df.isnull() devuelve un DataFrame booleano (True si es NaN, False si no)
+    # .all() aplicado a un DataFrame booleano, por defecto, comprueba si TODAS
+    # las entradas en cada columna son True (es decir, todas son NaN).
+    # [df.isnull().all()] obtiene una Serie booleana donde el índice son los
+    # nombres de las columnas y el valor es True si la columna está completamente vacía.
+    
+    # df.columns[df.isnull().all()] te da los nombres de las columnas que cumplen esta condición.
+    columns_to_drop = df.columns[df.isnull().all()].tolist()
+
+    if columns_to_drop:
+        print(f"Detectadas y eliminando columnas completamente vacías: {columns_to_drop}")
+        # df.drop() elimina las columnas especificadas.
+        # axis=1 indica que queremos eliminar columnas (axis=0 es para filas).
+        df_cleaned = df.drop(columns=columns_to_drop)
+    else:
+        print("No se encontraron columnas completamente vacías para eliminar.")
+        df_cleaned = df.copy() # Devolvemos una copia si no hay cambios para evitar SettingWithCopyWarning
+
+    return df_cleaned
 
 
 

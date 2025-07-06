@@ -5,8 +5,13 @@ from uuid import UUID
 from schemas.dataset import Dataset
 
 class ProjectUsersInfo(BaseModel):
-    id:str
+    id:UUID
     name: str
+
+    class Config:
+        # orm_mode = True
+        from_attributes = True
+
 
 class ProjectBase(BaseModel):
     title: str
