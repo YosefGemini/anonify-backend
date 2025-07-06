@@ -22,10 +22,11 @@ class AuthorCreate(AuthorBase):
 class AuthorToken(BaseModel):
     id: UUID
     name: str
-    cell_phone: str = None
-    mail: str
-    role: RoleInToken
     username: str
+
+    # cell_phone: str = None
+    # mail: str
+    role: RoleInToken
 
 
 class AuthCredentials(BaseModel):
