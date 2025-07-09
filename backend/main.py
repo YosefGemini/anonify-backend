@@ -35,6 +35,8 @@ from functions.auth_token import validate_token_header, generate_access_token
 from functions.dependencies import HasPermission
 
 
+from fastapi.staticfiles import StaticFiles
+import os
 
 
 
@@ -64,7 +66,10 @@ from models import file_model, author_model, column_model, column_type_model, qu
 from functions.init_function import init_roles_and_permissions
 app = FastAPI()
 Base.metadata.create_all(bind=engine)
+uploads_dir = os.path.join(os.getcwd(), "uploads")
+os.makedirs(uploads_dir, exist_ok=True)
 
+app.mount("/files", StaticFiles(directory=uploads_dir), name="uploads")
 pathname = os.path.dirname(path.realpath(__file__))
 ## Middlewares
 # CORS middleware
