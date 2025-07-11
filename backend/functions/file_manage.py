@@ -10,8 +10,10 @@ from crud import dataset_crud, file_crud, column_crud,column_type_crud, value_ty
 from functions.dataset_manage import analyze_dataset
 
 from schemas.dataset import DatasetCreate, DatasetUpdate
-from schemas.file import FileCreate
+from schemas.file import FileCreate, FileUpdate
 from schemas.column import ColumnCreate
+from pathlib import Path
+from conf import settings
 async def process_file_in_background(
     operation_id: str,
     project_id: str,
@@ -20,6 +22,14 @@ async def process_file_in_background(
     db: Session,
     current_user_id: str # Pasa el ID del usuario si lo necesitas
 ):
+    
+    # importante directorio de archivos en el docker 
+    # UPLOAD_DIRECTORY = Path(settings.UPLOAD_DIRECTORY) # O simplemente Path("/uploads"
+
+
+    # if not UPLOAD_DIRECTORY.exists():
+    #     UPLOAD_DIRECTORY.mkdir(parents=True, exist_ok=True) # Crea el directorio si no existe
+
     chunk_size = 1024 * 1024  # 1 MB
     pathname = os.getcwd()  # Ajusta esto según tu estructura
     base_name, extension = os.path.splitext(original_filename)
@@ -76,7 +86,7 @@ async def process_file_in_background(
                 name=datasetname,
                 project_id=project_id,
                 # query_id=None,  # Puedes ajustar esto según tu lógica
-                columns=[]  # Inicialmente vacío, puedes agregar columnas más tarde
+                # columns=[]  # Inicialmente vacío, puedes agregar columnas más tarde
             ),
         )
         print(f"[{operation_id}] Dataset ID created: {str(dataset_in_db.id)}")
@@ -88,10 +98,12 @@ async def process_file_in_background(
             path=str(pathToSave),
             size=os.path.getsize(pathToSave), # Tamaño real del archivo guardado # Convierte Path a str
             is_public=True,
-            datasets_id=dataset_in_db.id,  # Usa el ID del dataset recién creado
-            
+            datasets_id=dataset_in_db.id,              # Usa el ID del dataset recién creado
+            detail="uploaded",
+            columns=[]
             
         )
+
         print(f"[{operation_id}] File schema for DB: {file_schema}")
 
         file =await file_crud.create_files(db=db, file=file_schema)
@@ -111,7 +123,7 @@ async def process_file_in_background(
                 db=db,
                 column=ColumnCreate(
                     name=column['name'],
-                    dataset_id=dataset_in_db.id,
+                    file_id=file.id,
                     column_type_id=column_type.id,
                     value_type_id=value_type.id,
                 )
@@ -121,11 +133,21 @@ async def process_file_in_background(
         dataset_to_update = DatasetUpdate(
             id=dataset_in_db.id,
             status='uploaded',
-            rows=total_rows
+            
         )
 
 
+
         await dataset_crud.update_dataset_status(db=db,dataset=dataset_to_update)
+         # Pequeña pausa para permitir que el loop de eventos envíe mensajes
+
+        await send_progress_to_websocket(operation_id, 97, "Refresh", "Actualizando estado del registro del dataset")
+        await asyncio.sleep(0.05)
+        # actualizando informacion del file
+        await file_crud.update_file(db=db, file=FileUpdate(
+            id=str(file.id),
+            rows=total_rows
+        ) )
         # print("Quinta vez que se llama la funcion send_progress_to_websocket")
         await send_progress_to_websocket(operation_id, 100, "Completed", "Proceso completado con éxito.")
 

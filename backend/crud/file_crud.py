@@ -4,6 +4,8 @@ from uuid import UUID
 from schemas.file import FileBase , FileDB, FileUpdate, FileDelete, FileCreate
 from models import file_model
 from pathlib import Path
+from schemas.column import ColumnDelete
+from crud.column_crud import delete_column
 import os
 
 
@@ -23,7 +25,10 @@ async def create_files(db: Session, file: FileCreate):
         path=file.path,
         size=file.size,
         is_public=file.is_public,
-        datasets_id=file.datasets_id
+        datasets_id=file.datasets_id,
+        detail=file.detail,
+        columns=file.columns
+
         #product_id=file.product_id
     )
     db.add(db_file)
@@ -72,7 +77,26 @@ def get_file(db: Session, file_id: UUID):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"File with id {file_id} not found")
     return file_in_db
-        
+
+
+async def update_file(db: Session, file: FileUpdate):
+    file_in_db = db.query(file_model.File).filter(file_model.File.id == file.id).first()
+
+    if not file_in_db:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"File with id {file.id} not found")
+
+    # Iterar por los atributos definidos en el modelo y actualizarlos si no son None
+    for field, value in file.dict(exclude_unset=True).items():
+        if field != "id":
+            setattr(file_in_db, field, value)
+
+    db.commit()
+    db.refresh(file_in_db)
+
+    return file_in_db
+
+
 def delete_file(db: Session, file_id: UUID):
 
     print("Este es el FileID",file_id)
@@ -84,6 +108,7 @@ def delete_file(db: Session, file_id: UUID):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"file register with id {file_id} not found in db")
 
 
+
     print("File Path", file_in_db.path)
 
     file_path_str =file_in_db.path
@@ -92,6 +117,10 @@ def delete_file(db: Session, file_id: UUID):
     # convierto el string en un tipo 
     file_path = Path(file_path_str)
 
+
+    # eliminacion de columnas
+
+    
     
 
     file_deleted_physically = False
@@ -124,6 +153,19 @@ def delete_file(db: Session, file_id: UUID):
 
     if file_deleted_physically:
 
+
+        columns_to_delete = file_in_db.columns
+
+        for column in columns_to_delete:
+            try:
+                print("eliminando COLUMN:", column.id)
+                column_id = str(column.id)
+                delete_column(db=db, column=ColumnDelete(id=column_id))
+            except Exception as e:
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error with file {column.id} while try to be deleted with error: {e}")
+            continue
+
+        # ya eliminadas todas las columnas se procede a realizar la eliminacion del file en el DB
         db.delete(file_in_db)
         db.commit()
 

@@ -45,10 +45,10 @@ from schemas.file import FileBase, FileDB, FileCreate
 from schemas.author import AuthorBase, Author, AuthorCreate, AuthorUpdate, AuthorDelete, AuthorPublic, AuthorToken, AuthCredentials, AuthorPublicInformation, ShareInformation, AuthorBasicInformation
 from schemas.role import RoleBase, Role, RoleCreate, RoleUpdate, RoleDelete, RoleInToken
 from schemas.project import ProjectBase, Project, ProjectCreate, ProjectUpdate, ProjectDelete, ProjectInformation
-from schemas.dataset import DatasetBase, Dataset, DatasetCreate, DatasetPreviewResponse, DatasetUpdate, DatasetParameters, DatasetPreprocess
+from schemas.dataset import DatasetBase, Dataset, DatasetCreate, DatasetPreviewResponse, DatasetUpdate, DatasetParameters, DatasetPreprocess, DatasetInfoForAnomination
 from schemas.column import ColumnBase, Column, ColumnCreate, ColumnUpdate, ColumnDelete
 from schemas.column_type import ColumnTypeBase, ColumnType, ColumnTypeCreate, ColumnTypeUpdate, ColumnTypeDelete
-from schemas.query import QueryBase, QueryCreate, QueryUpdate, QueryDelete
+# from schemas.query import QueryBase, QueryCreate, QueryUpdate, QueryDelete
 from schemas.value_type import ValueTypeBase, ValueType, ValueTypeCreate, ValueTypeUpdate, ValueTypeDelete
 from schemas.permission import PermissionBase, Permission, PermissionCreate, PermissionUpdate, PermissionDelete
 from schemas.entity import EntityCreate, Entity
@@ -62,7 +62,7 @@ from functions.file_manage import process_file_in_background
 
 from crud import file_crud, author_crud, role_crud ,project_crud, dataset_crud, column_crud, column_type_crud, value_type_crud, permission_crud, entity_crud
 # from crud.patada_crud import procesar_patada 
-from models import file_model, author_model, column_model, column_type_model, query_model, value_type_model, db_model, dataset_model, entity_model
+from models import file_model, author_model, column_model, column_type_model, value_type_model, dataset_model, entity_model
 from functions.init_function import init_roles_and_permissions
 app = FastAPI()
 Base.metadata.create_all(bind=engine)
@@ -943,13 +943,14 @@ async def get_dataset_endpoint(
 @app.get("/api/datasets/{dataset_id}/preview",response_model=DatasetPreviewResponse )
 async def get_dataset_preview_endpoint(
     dataset_id: str,
-    current_user: AuthorToken = Depends(HasPermission(["view_dataset","view_data"])),
+    # current_user: AuthorToken = Depends(HasPermission(["view_dataset","view_data"])),
     db: Session= Depends(get_db),
     page_index: int = 1,
     rows: int = 10,
+    file_detail: str = ''
 
 ):
-    return await dataset_crud.get_dataset_preview(dataset_id=dataset_id,db=db, page_index=page_index, rows_per_page=rows)
+    return await dataset_crud.get_dataset_preview(db=db,dataset_id=dataset_id, file_detail=file_detail, page_index=page_index, rows_per_page=rows)
     
     
 
@@ -1014,5 +1015,12 @@ async def preprocess_dataset_endpoint(
         status_code=202 # Accepted
     )
 
-
+@app.get("/api/datasets/anonimaze/{datasetID}", response_model=DatasetInfoForAnomination)
+async def get_dataset_info_for_anonimize(
+    datasetID: str,
+    # current_user: AuthorToken = Depends(HasPermission("anominize")),
+    db: Session = Depends(get_db)
+):
+    return dataset_crud.get_datase_information_for_anonimization(db=db, dataset_id=datasetID)
+    
 

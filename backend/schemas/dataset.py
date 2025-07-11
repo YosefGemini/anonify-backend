@@ -2,9 +2,9 @@ from pydantic import BaseModel
 
 from uuid import UUID
 from schemas.file import FileDB
-from schemas.column import ColumnCreate, Column
-from typing import List, Dict, Any, Optional
 
+from typing import List, Dict, Any, Optional
+# from schemas.column import Column
 from schemas.entity import Entity
 
 
@@ -15,21 +15,27 @@ class DatasetBase(BaseModel):
 class DatasetCreate(DatasetBase):
     
     project_id: UUID
-    query_id: UUID = None
-    columns: list[ColumnCreate]
+    # query_id: UUID = None
+    # columns: list[ColumnCreate]
     # status: str = "created"
     
 
-    
+class DatasetInfoForAnomination(BaseModel):
+    id: UUID
+    project_id: UUID
+    # columns: list[Column]
+    file_to_anonimize: FileDB
+    class Config:
+        from_attributes = True 
 
 class Dataset(DatasetBase):
     id: UUID
     project_id: UUID
     # query_id: UUID = None
     files: list[FileDB]
-    columns: list[Column]
+    # columns: list[Column]
     status: str
-    rows: int
+    # rows: int
     entity_id: Optional[UUID] = None
     entity: Optional['Entity'] = None
     
@@ -48,16 +54,17 @@ class DatasetUpdate(BaseModel):
     id: UUID
     status: str
     entity: Optional[UUID] = None
-    rows: int
+    # rows: int
 
 
+# TODO ESTO ahy que corregir
 
 class DatasetParameters(BaseModel):
     dataset_status: str
     need_preprocess: bool
     need_imputation: bool
     cleaning_method: str
-    columns: list[Column]
+    # columns: list[Column]
     rows: int
 
 

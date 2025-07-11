@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: ClassVar[str]= os.getenv('AWS_SECRET_ACCESS_KEY')
     TOKEN_SECRET_KEY: ClassVar[str]= os.getenv('TOKEN_SECRET_KEY')
     ALGORITHM: ClassVar[str]= os.getenv('ALGORITHM')
+    UPLOAD_DIRECTORY: ClassVar[str]= os.getenv('UPLOAD_DIRECTORY')
+    
 
 
 settings = Settings()

@@ -176,3 +176,6 @@ async def read_csv_for_all_codifications(
     #         print("no funciono con la codificacion",encoding )
     #         continue
     # raise UnicodeDecodeError("No se pudo leer el archivo con las codificaciones estandar")
+
+
+    
