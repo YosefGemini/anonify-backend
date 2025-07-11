@@ -17,7 +17,7 @@ def create_column(db: Session, column: ColumnCreate):
 
     db_column = column_model.Column(
         name=column.name,
-        dataset_id=column.dataset_id,
+        file_id=column.file_id,
         column_type_id=column.column_type_id,
         # query_id=column.query_id,
         value_type_id=column.value_type_id

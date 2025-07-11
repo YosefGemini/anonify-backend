@@ -15,7 +15,8 @@ class Column(Base):
     
     column_type_id = Column(UUID(as_uuid=True), ForeignKey('column_types.id'), nullable=True)
     value_type_id = Column(UUID(as_uuid=True), ForeignKey('value_types.id'), nullable=True)
-    dataset_id = Column(UUID(as_uuid=True), ForeignKey('datasets.id'), nullable=False)
+    # dataset_id = Column(UUID(as_uuid=True), ForeignKey('datasets.id'), nullable=False)
+    file_id = Column(UUID(as_uuid=True), ForeignKey('files.id'), nullable=False)
     # Relationships
     
     column_type= relationship('ColumnType', backref=backref('column_type', uselist=False))

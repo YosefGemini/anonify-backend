@@ -8,14 +8,14 @@ class ColumnBase(BaseModel):
     
 
 class ColumnCreate(ColumnBase):
-    dataset_id: UUID
+    file_id: UUID
     column_type_id: UUID
     # query_id: str
     value_type_id: UUID
 
 class Column(ColumnBase):
     id: UUID
-    dataset_id: UUID
+    # file_id: UUID
     #column_type_id: UUID
     #value_type_id: UUID
     column_type: ColumnType = None
