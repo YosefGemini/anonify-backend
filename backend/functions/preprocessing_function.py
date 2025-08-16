@@ -54,6 +54,7 @@ async def preprocess_dataset(db: Session ,datasetID: str,projectID: str, paramet
             )
             
 
+        
         origin_file_path = files[0].path
         #TODO
         # hay que hacer que tambien verifique si no esta en los proyectos compartidos
@@ -69,6 +70,17 @@ async def preprocess_dataset(db: Session ,datasetID: str,projectID: str, paramet
         print("Contenido del CSV:\n",df.head(5))
         print("Codificacion del CSV:\n",cod)
         print("Cantidad de Filas", len(df))
+
+        
+        # arreglo de dataset?
+        for step in parameters.steps:
+
+            print("Datos de los pasos de preprocesamiento", step)
+            
+
+        # aqui se agrega los pasos de preprocesamiento
+
+
 
 
         # Convertir explícitamente None a NaN en todo el DataFrame

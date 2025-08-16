@@ -2,6 +2,7 @@ from pydantic import BaseModel
 
 from uuid import UUID
 from schemas.file import FileDB
+from schemas.column import Column
 
 from typing import List, Dict, Any, Optional
 # from schemas.column import Column
@@ -57,23 +58,29 @@ class DatasetUpdate(BaseModel):
     # rows: int
 
 
-# TODO ESTO ahy que corregir
+# TODO ESTO hay que corregir
+class DatasetPreprocessSteps(BaseModel):
+    columns: list[Column]
+    value: Optional[str | int | float]
+    technique: str
+
+
 
 class DatasetParameters(BaseModel):
     dataset_status: str
     need_preprocess: bool
-    need_imputation: bool
-    cleaning_method: str
-    # columns: list[Column]
-    rows: int
-
-
+    # need_imputation: bool
+    # cleaning_method: str
+    columns: list[Column]
+    rows: int 
+    steps: list[DatasetPreprocessSteps]
 
 
 class DatasetPreprocess(BaseModel):
     # userID: str
     projectID: str
     datasetID: str
+    entityID: str
     parameters: DatasetParameters
     
 
