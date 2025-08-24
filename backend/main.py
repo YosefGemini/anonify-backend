@@ -1000,6 +1000,7 @@ async def preprocess_dataset_endpoint(
         db,
         parameters.datasetID,
         parameters.projectID,
+        parameters.entityID,
         parameters.parameters,
         operation_id
     )

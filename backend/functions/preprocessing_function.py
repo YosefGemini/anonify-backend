@@ -1,6 +1,6 @@
 
 
-from functions.preprossesing_technics import convert_null_data,show_duplicates, remove_duplicates, identify_number_columns,identify_categorical_columns, aritmetic_mean_imputation, knn_imputation, moda_imputation, saveDataFrame,remove_empty_columns
+from functions.preprossesing_technics import convert_null_data, convert_null_data_with_value,drop_rows_by_missing_threshold, show_duplicates, remove_duplicates, identify_number_columns,identify_categorical_columns, aritmetic_mean_imputation, arithmetic_mean_imputation_with_specification,knn_imputation,knn_imputation_with_specifications ,moda_imputation, saveDataFrame,remove_empty_columns, mode_imputation_with_specifications
 from schemas.dataset import DatasetParameters, DatasetUpdate
 from schemas.file import FileCreate, FileUpdate
 from schemas.column import ColumnCreate
@@ -16,11 +16,11 @@ import pandas as pd
 from sqlalchemy.orm import Session
 from crud import dataset_crud, file_crud, column_crud,column_type_crud, value_type_crud
 from functions.dataset_manage import analyze_dataset
-async def preprocess_dataset(db: Session ,datasetID: str,projectID: str, parameters: DatasetParameters, operationID: str ):
+async def preprocess_dataset(db: Session ,datasetID: str,projectID: str,entityID: str, parameters: DatasetParameters, operationID: str ):
 
 
     
-
+    print("Fase 1")
 
     #TODO
 
@@ -71,141 +71,169 @@ async def preprocess_dataset(db: Session ,datasetID: str,projectID: str, paramet
         print("Codificacion del CSV:\n",cod)
         print("Cantidad de Filas", len(df))
 
-        
+        df_to_transformado = df.copy()
         # arreglo de dataset?
         for step in parameters.steps:
 
-            print("Datos de los pasos de preprocesamiento", step)
+            print("Pasos Técnica:", step.technique,"Valor: ", step.value,"Nro de columnas", len(step.columns))
+
+            if (step.technique == "default"):
+                # aqui el codigo para deafult
+                print("Camino por tecnica de default")
+                # Convertir explícitamente None a NaN en todo el DataFrame
+                await send_progress_to_websocket(operationID,10,"Limpiando...", "limpiando valores nulos")
+                await convert_null_data(df)
+                await asyncio.sleep(1)
+                # Verificar y extrar valores duplicados
+                await send_progress_to_websocket(operationID,15,"Analizando...", "Identificando valores duplicados")
+                duplicates= await show_duplicates(df=df)
+                print(duplicates)
+                if duplicates != 'No hay valores duplicados.':
+
+                    await send_progress_to_websocket(operationID,20,"Analizando...", "Se identificaron Valores duplicados")
+                    # Eliminar valores duplicados 
+                    remove_duplicates(df=df)
+                    await asyncio.sleep(1)
+
+                await send_progress_to_websocket(operationID,20,"Analizando...", "Se identificaron Valores duplicados")
+                await asyncio.sleep(1)
+
+                # Limpiar Columnas Vacias
+                await send_progress_to_websocket(operationID,25,"Limpiando...", "Limpiando Columnas con datos Vacios")
+                df = await remove_empty_columns(df)
+
+                await asyncio.sleep(1)
+
+                # Identificar Columnas numericas y categoricas
+
+                await send_progress_to_websocket(operationID,30,"Analizando...", "Identificando columnas numericas y categoricas")
+                numerical = await identify_number_columns(df=df)
+                categorical = await identify_categorical_columns(df=df)
+                print("Columnas categóricas", categorical, "columnas numericas", numerical)
+                await asyncio.sleep(1)
+
+                # Imputacion de valores numericos
+
+                await send_progress_to_websocket(operationID,40,"Analizando...", "Imputando valores numericos")
+                #TODO esto hay que definir bien la forma de envio de los datos seria recomendable enviar en un solo dataset
+                if parameters.need_imputation == True and parameters.cleaning_method == 'knn-imputation':
+                    await knn_imputation(df=df, columns=numerical)
+                elif parameters.need_imputation == True and parameters.cleaning_method == 'mean-imputation':
+                    await aritmetic_mean_imputation(df=df,columns=numerical)
+                
+                else:
+                    print("\nOpción no válida. Se usará imputación con MEDIA por defecto.\n")
+                    await aritmetic_mean_imputation(df=df,columns=numerical)
+
+                await asyncio.sleep(1)
+
+                # # Imputación a valores no numéricos (Categóricos)
+
+                await send_progress_to_websocket(operationID,60,"Analizando...", "Imputando valores categóricos")
+
+                await moda_imputation(df=df, columns=categorical)
+
+
+            elif(step.technique == "delete"):
+                print("Camino por técnica de delete")
+                df_to_transformado = await drop_rows_by_missing_threshold(df=df_to_transformado, threshold_percentage= step.value,columns=step.columns)
+                await asyncio.sleep(1)
+
+            elif(step.technique == "const_value"):
+                print("Camino por técnica de delete")
+                df_to_transformado = await convert_null_data_with_value(df=df_to_transformado, value=step.value, columns=step.columns)
+                await asyncio.sleep(1)
+                
+            elif(step.technique == "media_impute"):
+                print("Camino por técnica de imputación por media")
+                df_to_transformado = await arithmetic_mean_imputation_with_specification(df=df_to_transformado, columns=[col.name for col in step.columns])
+                await asyncio.sleep(1)
+
+            elif(step.technique == "knn_impute"):
+                print("Camino por técnica de imputación por KNN")
+                df_to_transformado = await knn_imputation_with_specifications(df=df_to_transformado, columns=[col.name for col in step.columns])
+                await asyncio.sleep(1)
+
+            elif(step.technique == "most_frecuent"):
+                print("Camino por técnica de imputación por moda")
+                df_to_transformado = await mode_imputation_with_specifications(df=df_to_transformado, columns=[col.name for col in step.columns])
+                await asyncio.sleep(1)
+
+            else:
+                print("El camino indicado no tiene una especificación se procederá a realizar el salto")
+
+                    
+        # FIN DE CASOS
             
 
-        # aqui se agrega los pasos de preprocesamiento
+
+        # # Guardando nuevo archivo 
+
+            await send_progress_to_websocket(operationID,70,"Analizando...", "Imputando valores categoricos")
+
+            file_newPath = dataset_in_db.files[0].path.replace(".csv", "_preprocessed.csv")
+            print(f"[{operationID}] Guardando archivo preprocesado en: {file_newPath}")
+            value=await saveDataFrame(df, file_newPath,cod)
+
+            
+
+            await send_progress_to_websocket(operationID,80,"Guardando archivo", "Guardando archivo preprocesado")
+            # #despues de guardado el archivo se procede a crear el registor en la base de datos del FILE
+            if value:
+
+                file= await file_crud.create_files(db=db,file= FileCreate(
+                    name=dataset_in_db.files[0].name.replace(".csv", "_preprocessed.csv"),
+                    path=file_newPath,
+                    size=os.path.getsize(file_newPath),  # Tamaño real del archivo guardado
+                    is_public=True,
+                    datasets_id=dataset_in_db.id,  # Usa el ID del dataset recién creado
+                    detail="preprocessed",
+                    columns=[]
+                ))
+
+                await send_progress_to_websocket(operationID, 85, "Analyzing File",f"Registro del Archivo creado satisfactoriamente en la base de  con los siguientes datos")
+                [columns_info,total_rows] = await analyze_dataset(file.path)
+                print(columns_info)
+                for column in columns_info:
+
+            #     # print("Informacion de la columna:", column)
 
 
-
-
-        # Convertir explícitamente None a NaN en todo el DataFrame
-        await send_progress_to_websocket(operationID,10,"Limpiando...", "limpiando valores nulos")
-        await convert_null_data(df)
-        await asyncio.sleep(1)
-
-        # Verificar y extrar valores duplicados
-        await send_progress_to_websocket(operationID,15,"Analizando...", "Identificando valores duplicados")
-        duplicates= await show_duplicates(df=df)
-
-        print(duplicates)
-        if duplicates != 'No hay valores duplicados.':
-
-            await send_progress_to_websocket(operationID,20,"Analizando...", "Se identificaron Valores duplicados")
-            # Eliminar valores duplicados 
-            remove_duplicates(df=df)
-            await asyncio.sleep(1)
-
-        await send_progress_to_websocket(operationID,20,"Analizando...", "Se identificaron Valores duplicados")
-        await asyncio.sleep(1)
-
-
-
-        # Limpiar Columnas Vacias
-        await send_progress_to_websocket(operationID,25,"Limpiando...", "Limpiando Columnas con datos Vacios")
-        df = await remove_empty_columns(df)
-
-        await asyncio.sleep(1)
-
-        # Identificar Columnas numericas y categoricas
-
-        await send_progress_to_websocket(operationID,30,"Analizando...", "Identificando columnas numericas y categoricas")
-        numerical = await identify_number_columns(df=df)
-        categorical = await identify_categorical_columns(df=df)
-        print("Columnas categoricas", categorical, "columnas numericas", numerical)
-        await asyncio.sleep(1)
-
-        # Imputacion de valores numericos
-
-        await send_progress_to_websocket(operationID,40,"Analizando...", "Imputando valores numericos")
-        #TODO esto hay que definir bien la forma de envio de los datos seria recomendable enviar en un solo dataset
-        if parameters.need_imputation == True and parameters.cleaning_method == 'knn-imputation':
-            await knn_imputation(df=df, columns=numerical)
-        elif parameters.need_imputation == True and parameters.cleaning_method == 'mean-imputation':
-            await aritmetic_mean_imputation(df=df,columns=numerical)
-        
-        else:
-            print("\nOpción no válida. Se usará imputación con MEDIA por defecto.\n")
-            await aritmetic_mean_imputation(df=df,columns=numerical)
-
-        await asyncio.sleep(1)
-        # Imputacion a valores no numericos (Categoricos)
-        await send_progress_to_websocket(operationID,60,"Analizando...", "Imputando valores categoricos")
-
-        await moda_imputation(df=df, columns=categorical)
-
-
-        # Guardando nuevo archivo 
-
-        await send_progress_to_websocket(operationID,70,"Analizando...", "Imputando valores categoricos")
-
-        file_newPath = dataset_in_db.files[0].path.replace(".csv", "_preprocessed.csv")
-        print(f"[{operationID}] Guardando archivo preprocesado en: {file_newPath}")
-        value=await saveDataFrame(df, file_newPath,cod)
-
-        
-
-        await send_progress_to_websocket(operationID,80,"Guardando archivo", "Guardando archivo preprocesado")
-        #despues de guardado el archivo se procede a crear el registor en la base de datos del FILE
-        if value:
-
-            file= await file_crud.create_files(db=db,file= FileCreate(
-                name=dataset_in_db.files[0].name.replace(".csv", "_preprocessed.csv"),
-                path=file_newPath,
-                size=os.path.getsize(file_newPath),  # Tamaño real del archivo guardado
-                is_public=True,
-                datasets_id=dataset_in_db.id,  # Usa el ID del dataset recién creado
-                detail="preprocessed",
-                columns=[]
-            ))
-
-            await send_progress_to_websocket(operationID, 85, "Analyzing File",f"Registro del Archivo creado satisfactoriamente en la base de  con los siguientes datos")
-            [columns_info,total_rows] = await analyze_dataset(file.path)
-            print(columns_info)
-            for column in columns_info:
-
-            # print("Informacion de la columna:", column)
-
-
-                column_type= column_type_crud.get_column_type_by_name(db=db, name=column['data_type'])
-                value_type = value_type_crud.get_value_type_by_name(db=db,  name='UNDEFINED')
-                column_crud.create_column(
+                    column_type= column_type_crud.get_column_type_by_name(db=db, name=column['data_type'])
+                    value_type = value_type_crud.get_value_type_by_name(db=db,  name='UNDEFINED')
+                    column_crud.create_column(
+                        db=db,
+                        column=ColumnCreate(
+                        name=column['name'],
+                        file_id=file.id,
+                        column_type_id=column_type.id,
+                        value_type_id=value_type.id,
+                    )
+                )
+            
+                await send_progress_to_websocket(operationID,87,"Analizando Archivo", "Registro de columnas del archivo generado correctamente")
+            #     # agregando registro en base de datos
+            #     #TODO 
+            #     # Falta que envie el dato de la entidad que seva a asociar
+                await update_dataset_status(
                     db=db,
-                    column=ColumnCreate(
-                    name=column['name'],
-                    file_id=file.id,
-                    column_type_id=column_type.id,
-                    value_type_id=value_type.id,
+                    dataset=DatasetUpdate(
+                        id=dataset_in_db.id,
+                        status='preprocessed',
+                          # Actualiza el número de filas
+                        entity=dataset_in_db.entity if dataset_in_db.entity else None  # Mantiene la entidad si existe
+                    )
                 )
-            )
-        
-            await send_progress_to_websocket(operationID,87,"Analizando Archivo", "Registro de columnas del archivo generado correctamente")
-            # agregando registro en base de datos
-            #TODO 
-            # Falta que envie el dato de la entidad que seva a asociar
-            await update_dataset_status(
-                db=db,
-                dataset=DatasetUpdate(
-                    id=dataset_in_db.id,
-                    status='preprocessed',
-                      # Actualiza el número de filas
-                    entity=dataset_in_db.entity if dataset_in_db.entity else None  # Mantiene la entidad si existe
-                )
-            )
-            await send_progress_to_websocket(operationID, 89, "Refresh", "Actualizando estado del registro del dataset")
-            await asyncio.sleep(0.05)
-            # actualizando informacion del file
-            await file_crud.update_file(db=db, file=FileUpdate(
-                id=str(file.id),
-                rows=len(df),
-                # detail="preprocessed"
-            ) )
-        
-            await asyncio.sleep(1)
+                await send_progress_to_websocket(operationID, 89, "Refresh", "Actualizando estado del registro del dataset")
+                await asyncio.sleep(0.05)
+            #     # actualizando informacion del file
+                await file_crud.update_file(db=db, file=FileUpdate(
+                    id=str(file.id),
+                    rows=len(df),
+                    detail="preprocessed"
+                ) )
+            
+            #     await asyncio.sleep(1)
             await send_progress_to_websocket(operationID,90,"Guardando Cambios", "Registro de cambios guardado en la base de datos")
         else:
             await asyncio.sleep(1)
